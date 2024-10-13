@@ -1,0 +1,107 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: characterSelectParam
+//   Authors: Hydra
+//   Version: 1.0
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct 
+{
+    BigEndian();
+    uint FileSize;
+
+    LittleEndian();
+
+    uint Version;
+    uint Count;
+    FSkip(8);
+
+    local int Pos;
+
+    local int Count2 = 0;
+
+
+    struct{
+        uint64 CharacterCodeOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + CharacterCodeOffset - 8);
+        string CharacterCode;
+        FSeek(Pos);
+        
+        uint PageIndex;
+        uint IconIndex;
+        uint64 CostumeIndex;
+
+        //Printf("CostumeIndex = %d\n", CostumeIndex);
+
+
+        uint64 MessageIdOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + MessageIdOffset - 8);
+        string MessageIdCode;
+        FSeek(Pos);
+
+        uint64 duelPlayerCostumeIndex;
+        //Assert(unkk0 == 1);
+
+
+        uint64 MessageId2Offset <hidden = true>;
+        
+        Pos = FTell();
+        FSeek(Pos + MessageId2Offset - 8);
+        string MessageId2Code;
+        FSeek(Pos);
+        
+        uint64 AccessoryOffset <hidden = true>;
+        
+        Pos = FTell();
+        FSeek(Pos + AccessoryOffset - 8);
+        string AccessoryCode;
+        FSeek(Pos);
+        
+        
+        uint64 AnimationCodeOffset <hidden = true>;
+
+        Pos = FTell();
+        FSeek(Pos + AnimationCodeOffset - 8);
+        string AnimationCode;
+        FSeek(Pos);
+
+
+
+        float floats[60];
+
+
+        uint64 DictionaryCodeOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + DictionaryCodeOffset - 8);
+        string DictionaryCode;
+        FSeek(Pos);
+
+        int64 DictionaryIndex;
+        
+
+        if (CharacterCode == "9hgr00")  
+        {
+            Printf("FOUND at Index = %d", Count2);
+        }
+        Count2 += 1;
+        
+    }CharacterSelect[Count] <optimize=false, read= Str("%s (%s)  %d",CharacterCode, DictionaryCode, DictionaryIndex)>;
+
+    local int headerSize = 20;  
+    local int sectionSize = 320;  
+    local int remainingDataSize = FileSize - headerSize - (sectionSize * Count);  // Calculate remaining size
+    
+    
+    struct 
+    {
+        uchar Data[remainingDataSize + 4];  // Adjust size dynamically with additional 4 bytes
+    } StringEntriesSection <optimize = false>;
+} 
+characterSelectStruct <optimize = false>;
