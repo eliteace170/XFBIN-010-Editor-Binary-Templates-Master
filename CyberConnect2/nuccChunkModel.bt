@@ -1,0 +1,301 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nud.bt
+//   Authors: 
+//   Version: 1.0
+//   Purpose: Parse Bandai Namco NUD Model files
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.0 - Initial release
+//------------------------------------------------
+
+#include "/../include.h";
+BigEndian();
+
+
+
+
+typedef struct
+{
+    uint ShaderID;
+    uint Unk;
+    ushort SourceFactor;
+    ushort TextureCount;
+    ushort DestinationFactor;
+    ubyte AlphaTest;
+    ubyte AlphaFunction;
+    ushort RefAlpha;
+    ushort CullMode;
+    float unk1;
+    float unk2;
+    uint ZBufferOffset;
+    
+    struct{
+            ubyte baseID <format=hex>;
+            ubyte groupID <format=hex>;
+            ubyte subgroupID <format=hex>;
+            ubyte textureID <format=hex>;
+            uint Unk1;
+            ushort Unk2;
+            ushort MapMode; // could be projection mode 
+            ubyte WrapModeS; //Extension mode X?
+            ubyte WrapModeT; //Extension mode Y?
+            ubyte MinFilter;
+            ubyte MagFilter;
+            ubyte MipDetail;
+            ubyte Unk2;
+            uint Unk3;
+            ushort Unk4;
+        }Textures[TextureCount];
+    
+    local int m = -1;
+    while (m == -1)
+    {
+    struct{
+            uint MatAttSize;
+            uint NameStart;
+            uint PropValuesCount;
+            uint Unk4;
+            float PropValues[PropValuesCount];
+        }MaterialProperties;
+        
+        if (MaterialProperties.MatAttSize == 0)
+        {
+            m = 0;
+        }
+        if (MaterialProperties.PropValuesCount == 0)
+        {FSkip(4);}
+    }
+}SMaterial;
+
+
+typedef struct{
+
+    char Magic[4];
+    uint NUDSize;
+    ushort Version;
+    ushort MeshGroupCount;
+    short BoneRange[2];
+    uint PolyClumpStart;
+    uint PolyClumpSize;
+    
+    local uint VertClumpStart = PolyClumpStart + PolyClumpSize;
+    uint VertClumpSize;
+
+    local uint VertAddClumpStart = VertClumpStart + VertClumpSize;
+    uint VertAddClumpSize;
+    
+    local uint NameStart = VertAddClumpStart + VertAddClumpSize;
+    
+    float ModelBoundingSphere[4];
+    
+    struct{
+        float BoundingSphere[8];
+        uint NameStart;
+        ushort Unk1;
+        ushort BoneFlags;
+        ushort SingleBind;
+        ushort MeshCount;
+        uint PositionB;
+        
+    }MeshGroups;
+    
+    struct{
+        uint PolyClumpStart;
+        uint VertClumpStart;
+        uint VertAddClumpStart;
+        ushort VertexCount;
+        ubyte VertexSize;
+        ubyte UVSize;
+        struct{
+            uint MaterialOffset1;
+            uint MaterialOffset2;
+            uint MaterialOffset3;
+            uint MaterialOffset4;
+        }MaterialOffsets;
+        
+        ushort FaceCount;
+        ubyte FaceSize;
+        ubyte FaceFlag;
+        FSkip(0xC);
+
+    }MeshHeader[MeshGroups.MeshCount];
+    
+    local int i;
+    struct{
+        for (i = 0; i< MeshGroups.MeshCount; i++)
+        {
+            if (MeshHeader[i].MaterialOffsets.MaterialOffset1 > 0)
+            {
+                struct SMaterial Material1<optimize=false>;
+                //FSkip(4);
+            }
+            if (MeshHeader[i].MaterialOffsets.MaterialOffset2 > 0)
+            {
+                struct SMaterial Material2<optimize=false>;
+                //FSkip(4);
+            }
+            if (MeshHeader[i].MaterialOffsets.MaterialOffset3 > 0)
+            {
+                struct SMaterial Material3<optimize=false>;
+                //FSkip(4);
+            }
+            if (MeshHeader[i].MaterialOffsets.MaterialOffset4 > 0)
+            {
+                struct SMaterial Material4<optimize=false>;
+                //FSkip(4);
+            }
+        }
+    }MeshMaterials;
+    
+    local int t;
+    struct{
+        for (t = 0; t< MeshGroups.MeshCount; t++)
+        {
+            struct{
+                short triangles[MeshHeader[t].FaceCount+3];
+            }MeshTriangles;
+        }
+    }Triangles;
+    if (sizeof(Triangles) % 0x4 != 0)
+    {
+        FSkip(sizeof(Triangles) % 0x4);
+    }
+    
+    local int BoneType;
+    local int VertexType;
+    local int c;
+    local int UVCount;
+    local int UVType;
+    local int UVSize;
+    local int v;
+    local int u;
+    for (c = 0; c< MeshGroups.MeshCount; c++)
+    {
+        BoneType = MeshHeader[c].VertexSize & 0xF0;
+        
+        if (BoneType > 0)
+        {
+            UVCount = MeshHeader[c].UVSize >> 4;
+            UVType = MeshHeader[c].UVSize & 0x0F;
+            
+            struct{
+                for (v = 0; v < MeshHeader[c].VertexCount; v++)
+                {
+                    if (UVType == 2)
+                    {
+                        struct{
+                            ubyte R;
+                            ubyte G;
+                            ubyte B;
+                            ubyte A;
+                        }VertexColor;
+                    }
+                    else if (UVType == 4)
+                    {
+                        struct{
+                            hfloat R;
+                            hfloat G;
+                            hfloat B;
+                            hfloat A;
+                        }VertexColor;
+                    }
+                    for (u = 0; u < UVCount; u++)
+                    {
+                        struct{
+                            hfloat U;
+                            hfloat V;
+                        }UV;
+                    }
+                }
+            }Vertex_UV_Color;
+        }
+    }
+    for (c = 0; c< MeshGroups.MeshCount; c++)
+    {
+        BoneType = MeshHeader[c].VertexSize & 0xF0;
+        VertexType = MeshHeader[c].VertexSize & 0x0F;
+        UVSize = MeshHeader[c].UVSize;
+        
+        for (v = 0; v < MeshHeader[c].VertexCount; v++)
+        {
+            struct{
+                float Position[3];
+                
+                if (VertexType == 0)
+                {
+                    FSkip(4);
+                }
+                else if (VertexType == 1)
+                {
+                    float Normal[3];
+                    FSkip(4);
+                }
+                else if (VertexType == 2)
+                {
+                    float Normal[3];
+                    FSkip(40);
+                }
+                else if (VertexType == 3)
+                {
+                    FSkip(4);
+                    float Normal[3];
+                    FSkip(4);
+                    float BiTangents[4];
+                    float Tangents[4];
+                }
+                else if (VertexType == 6)
+                {
+                    hfloat Normal[3];
+                    FSkip(2);
+
+                }
+                else if (VertexType == 7)
+                {
+                    hfloat Normal[3];
+                    FSkip(2);
+                    hfloat BiTangents[4];
+                    hfloat Tangents[4];
+                }
+                
+                if (BoneType == 0) //Rigid mesh
+                {
+                    if (UVSize >= 18)
+                    {
+                        struct{
+                            byte R;
+                            byte G;
+                            byte B;
+                            byte A;
+                        }Color;
+                    }
+                    for (u = 0; u < UVSize >> 4; u++)
+                    {
+                        struct{
+                            hfloat U;
+                            hfloat V;
+                        }UV;
+                    }
+                }
+                else if (BoneType == 0x10)
+                {
+                    int BoneID[4];
+                    float BoneWeights[4];
+                }
+                else if (BoneType == 0x20)
+                {
+                    short BoneID[4];
+                    hfloat BoneWeights[4];
+                }
+                else if (BoneType == 0x40)
+                {
+                    byte BoneID[4];
+                    ubyte BoneWeights[4];
+                }
+            }Vertex;
+        }        
+    }
+}sNud;

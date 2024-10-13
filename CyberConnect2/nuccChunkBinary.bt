@@ -1,0 +1,83 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: The master file that includes all the binary directories
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------]
+
+#include "nuccChunkBinaries/pairSpSkillCombinationParam.bt"
+#include "nuccChunkBinaries/prmParam.bt"
+
+
+
+
+typedef struct
+{
+    // Compare chunkName to each suffix
+    if (EndsWith(chunkName, "prm_awa")  // character controls
+        || EndsWith(chunkName, "prm_skl")
+        || EndsWith(chunkName, "prm_awa")
+        || EndsWith(chunkName, "prm_awa2")
+        || EndsWith(chunkName, "prm_spl")
+        || EndsWith(chunkName, "prm_boss")
+        || EndsWith(chunkName, "prm_upgrade01")
+        || EndsWith(chunkName, "prm_upgrade02")
+        || EndsWith(chunkName, "prm_upgrade03")
+        || EndsWith(chunkName, "prm_boss01")
+        || EndsWith(chunkName, "prm_boss02")
+        || EndsWith(chunkName, "prm_boss03")
+        || EndsWith(chunkName, "prm_boss04"))
+   
+        {
+            struct pl_anmStruct VerBinary;
+            BigEndian();
+            // Further processing of MotBinary...
+        }
+    else if (EndsWith(chunkName, "prm_sklslot") ) // _x skill slots basically projectiles index
+        {
+             struct ProjectileEntries ProjectileSettings; 
+              BigEndian();
+             
+        } 
+    else if (EndsWith(chunkName, "prm_etc") ) //movement settings
+        {
+             struct GeneralMovementEntries MovementSettings; 
+              BigEndian();
+        }
+    else if (EndsWith(chunkName, "prm_hit") ) //for hurtspheres and hitspheres
+        {
+             struct CollisionStruct CollisionSettings; 
+              BigEndian();
+        } 
+    else if (EndsWith(chunkName, "prm_load") )
+        {
+             struct PrmLoadSettings Files; 
+              BigEndian();
+        } 
+    else
+    {
+        uchar Data[Size];
+    }
+    
+}binarystructs<optimize= false>;
+
+int EndsWith(string str, string suffix)
+{
+    local int str_len = Strlen(str);
+    local int suffix_len = Strlen(suffix);
+
+    // Check if the string is long enough to contain the suffix
+    if (str_len >= suffix_len)
+    {
+        // Extract the end of the string and compare with the suffix
+        local string endOfString = SubStr(str, str_len - suffix_len, suffix_len);
+        return (Strcmp(endOfString, suffix) == 0);
+    }
+    return 0;  // Return false if the string is shorter than the suffix
+}

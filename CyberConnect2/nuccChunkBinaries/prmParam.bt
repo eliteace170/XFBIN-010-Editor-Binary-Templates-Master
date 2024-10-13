@@ -1,0 +1,531 @@
+typedef struct
+{
+    
+    enum <uint16> MotionFunctions
+        {
+            ME_SPSKILL_END_MOVE = 0,
+            ME_SPSKILL_END_MOVE2 = 1,
+            ME_SPSKILL_START_MOVE_BASE_DEF = 2,
+            ME_SET_SKILL_LOOP_TIME = 3,
+            ME_ENABLE_ATTACK_PRIORITY = 4,
+            ME_DISABLE_ATTACK_PRIORITY = 5,
+            ME_ENABLE_ATTACK_PRIORITY_COMMON = 6,
+            ME_DISABLE_ATTACK_PRIORITY_COMMON = 7,
+            ME_SKILL_DAMAGE_RATE = 8,
+            ME_THROUGH_NORMAL_ATTACK_ON = 9,
+            ME_THROUGH_NORMAL_ATTACK_OFF = 10,
+            ME_KAWARIMI_DISTANCE_SET = 11,
+            ME_KAWARIMI_DISTANCE_RESET = 12,
+            ME_SET_AWAKE_CONDITION = 13,
+            ME_SPSKILL_CUTIN_FRAME = 14,
+            ME_NOT_USE_HIT_STOP = 15,
+            ME_USE_HIT_STOP = 16,
+            ME_SET_DODGE_OFFSET = 17,
+            ME_ADD_CONNECTED_MOTION1 = 18,
+            ME_ADD_CONNECTED_MOTION2 = 19,
+            ME_ADD_CONNECTED_MOTION3 = 20,
+            ME_ENEMY_MOTION_SLOW_START = 21,
+            ME_ENEMY_MOTION_SLOW_END = 22,
+            ME_ENEMY_MOTION_AFTERHIT_SLOW_START = 23,
+            ME_ENEMY_MOTION_AFTERHIT_SLOW_END = 24,
+            ME_SPTYPE_ACT_CANCEL_ON = 25,
+            ME_SPTYPE_ACT_CANCEL_OFF = 26,
+            ME_SKILL_CANCEL_START = 27,
+            ME_SKILL_CANCEL_END = 28,
+            ME_FLOATING_ON = 29,
+            ME_FLOATING_OFF = 30,
+            ME_CIR_ACCEL_SET = 31,
+            ME_JUMPVEL_SET = 32,
+            ME_FWDVELOCITY_SET = 33,
+            ME_FWDVELOCITY_SET_INTERP = 34,
+            ME_CIR_VELOCITY_SET = 35,
+            ME_WARP_AROUND_ENEMY = 36,
+            ME_GRAVITY_SET = 37,
+            ME_VELOCITY_RESET = 38,
+            ME_GRAVITY_RESET = 39,
+            ME_VERTICAL_VELOCITY_RESET = 40,
+            ME_FLIGHT_BEGIN = 41,
+            ME_FLIGHT_END = 42,
+            ME_HOMING_SET = 43,
+            ME_WARP_AROUND_ENEMY_RESERVE = 44,
+            ME_WARP_AROUND_ENEMY_EXEC = 45,
+            ME_ATK_SIDE_MOVE = 46,
+            ME_ATK_AIR_HOMING_ON = 47,
+            ME_ATK_AIR_HOMING_OFF = 48,
+            ME_HOMING_MOVE_BEGIN = 49,
+            ME_HOMING_AIR = 50,
+            ME_COMBO_MOVEFORWARD_INIT_ON = 51,
+            ME_COMBO_MOVEFORWARD_INIT_OFF = 52,
+            ME_CIR_VELOCITY_SET2 = 53,
+            ME_ENTRY_EFF_IMPACTLAND = 54,
+            ME_ENTRY_EFF_INOUT_LAND = 55,
+            ME_ENTRY_EFF_CTG = 56,
+            ME_ENTRY_EFF_CTG_SYNC = 57,
+            ME_ENTRY_EFF_CTG_GROUND = 58,
+            ME_ENABLE_DRAW_BODYEFF = 59,
+            ME_DISABLE_DRAW_BODYEFF = 60,
+            ME_DESTROY_EFF = 61,
+            ME_THROW_EFFECT = 62,
+            ME_FOOT_CHAKRA_EFF_ON = 63,
+            ME_FOOT_CHAKRA_EFF_OFF = 64,
+            ME_ENABLE_DRAW_AWAAURA = 65,
+            ME_DISABLE_DRAW_AWAAURA = 66,
+            ME_ENABLE_DRAW_BODYSKILLEFF = 67,
+            ME_DISABLE_DRAW_BODYSKILLEFF = 68,
+            ME_ENABLE_ENEMY_DRAW_AWAAURA = 69,
+            ME_DISABLE_ENEMY_DRAW_AWAAURA = 70,
+            ME_ANMCAMERA_ON = 71,
+            ME_ANMCAMERA_OFF = 72,
+            ME_ANMCAMERA_REVERSE_ON = 73,
+            ME_ANMCAMERA_REVERSE_OFF = 74,
+            ME_SHAKE_CAMERA = 75,
+            ME_SHAKE_CAMERA_VERTICAL = 76,
+            ME_SHAKE_CAMERA_HORIZONTAL = 77,
+            ME_COMBOCAMERA_ON = 78,
+            ME_COMBOCAMERA_OFF = 79,
+            ME_RESET_CAMERA = 80,
+            ME_CAMERA_LOOKAT_SET = 81,
+            ME_CAMERA_LOOKAT_RESET = 82,
+            ME_CORRECT_CAMERA_DIST = 83,
+            ME_CORRECT_CAMERA_DIST_RESET = 84,
+            ME_CHANGE_HUGEAWAKE2_FARCAMERA = 85,
+            ME_CAMERA_LOOKAT_SET_HUGEAWAKE2 = 86,
+            ME_SHAKE_CAMERA_NUM = 87,
+            ME_CAMERARESET_CANCEL_BY_SKILL = 88,
+            ME_ATK_HIT_CAM_QUAKE_ON = 89,
+            ME_ATK_HIT_CAM_QUAKE_OFF = 90,
+            ME_BUNSHIN_ENTRY = 91,
+            ME_BUNSHIN_ENTRY_AT_ENEMY = 92,
+            ME_BUNSHIN_POSITION = 93,
+            ME_BUNSHIN_ATKHIT_ON = 94,
+            ME_BUNSHIN_ATKHIT_OFF = 95,
+            ME_AWAKE2_ATKMARKER_ON = 96,
+            ME_AWAKE2_ATKMARKER_OFF = 97,
+            ME_AWAKE2_AIM_ON = 98,
+            ME_AWAKE2_AIM_OFF = 99,
+            ME_AWAKE3_AIMRESET = 100,
+            ME_AWAKE2_AIM_PARAM = 101,
+            ME_AWAKE3_AIM_ADDOBJECT = 102,
+            ME_CHANGE_HUGEAWAKE2_MIDDLECAMERA = 103,
+            ME_CHANGE_HUGEAWAKE2_MIDDLECAMERA_OFF = 104,
+            ME_CHANGE_HUGEAWAKE2_FARCAMERA_OFF = 105,
+            ME_2DNZ_AWAKE2_SUICIDE = 106,
+            ME_2DNZ_AWAKE2_DODGE = 107,
+            ME_2HDN_AWAKE2_R1_ATK_COUNT_SET = 108,
+            ME_2HDN_AWAKE2_R1_SET_CURSE_MARKER = 109,
+            ME_2HNT_AWAKE2_SET_SKILL_COST = 110,
+            ME_AWAKE2_ROT_CTRL_START = 111,
+            ME_AWAKE2_ROT_CTRL_END = 112,
+            ME_AWAKE2_SET_CHAKRA_DRAIN = 113,
+            ME_SET_AWAKE2_CONDITION = 114,
+            ME_1P2P_DIST_CHECK = 115,
+            ME_3HSM_AWAKE2_ENTRY_WOODDRAGON = 116,
+            ME_3GAR_AWAKE2_L1_AGRD_COUNT_SET = 117,
+            ME_DOWN_LOOP_ENEMY = 118,
+            ME_ACT_FALL = 119,
+            ME_ENEMY_SET_ACTION = 120,
+            ME_ADD_CONDITION_PARAM = 121,
+            ME_DAMAGE_TO_YOURSELF = 122,
+            ME_DOWN_ENEMY_AT_FOOTPOS = 123,
+            ME_ENEMY_MOVE_SELF = 124,
+            ME_ENEMY_MOVE_ENEMY_FOOTPOS = 125,
+            ME_MOVE_CORRECT_T0_POS = 126,
+            ME_SET_ENEMY_POS_DIRC_BY_ANM = 127,
+            ME_ENEMY_MOVE_SELF_COORD = 128,
+            ME_ATK_HIT_HEIGHT = 129,
+            ME_DAMAGE_VALUE_SET = 130,
+            ME_DAMAGE_VALUE_SET_SPSKILL = 131,
+            ME_COMBO_DIRECTION_BEGIN = 132,
+            ME_COMBO_DIRECTION_BEGIN_NOLOCK = 133,
+            ME_COMBO_DIRECTION_END = 134,
+            ME_ATK_HOMING_ON = 135,
+            ME_ATK_HOMING_OFF = 136,
+            ME_ATK_HOMING_ALLRANGE = 137,
+            ME_DAMAGE_SET_DIRECT = 138,
+            ME_DAMAGE_SET_DIRECT_BOTH = 139,
+            ME_ADD_COMBO_COUNTER = 140,
+            ME_SE_ON_CTG = 141,
+            ME_SE_ON_ID = 142,
+            ME_THROW_VOICE1 = 143,
+            ME_VOICE = 144,
+            ME_VOICE_ON_ID = 145,
+            ME_VOICE_ON_ID_NO_AWAKE_ONLY = 146,
+            ME_VOICE_ON_ID_AWAKE_ONLY = 147,
+            ME_DISABLE_ATTACK_VOICE = 148,
+            ME_DISABLE_COMBO_LAST_SE = 149,
+            ME_SET_CAPTION = 150,
+            ME_JOIN_SUPPORT_START = 151,
+            ME_JOIN_SUPPORT_END = 152,
+            ME_PAD_VIBRATION = 153,
+            ME_ENTRY_DUMMY_SKILL_N = 154,
+            ME_ENTRY_DUMMY_SKILL_N_SYNC = 155,
+            ME_ENEMY_CTRL_ON = 156,
+            ME_ENEMY_CTRL_OFF = 157,
+            ME_STIFF_SET = 158,
+            ME_ANM_SPEED_SET = 159,
+            ME_ENTRY_PROJECTILE = 160,
+            ME_ENTRY_CHAKRA_PROJECTILE = 161,
+            ME_ENTRY_ITEM = 162,
+            ME_ENTRY_COMBO_SKILL_N = 163,
+            ME_ENTRY_COMBO_SKILL_N_COORD = 164,
+            ME_ENTRY_SKILL_ANY = 165,
+            ME_ENTRY_SKILL_ANY_COORD = 166,
+            ME_SKILL_CMB_ON = 167,
+            ME_SKILL_CMB_OFF = 168,
+            ME_INPUT_CHARGE = 169,
+            ME_PARTNER_ORDER = 170,
+            ME_WIRE_ON = 171,
+            ME_WIRE_OFF = 172,
+            ME_PARTNER_DRAW_OFF = 173,
+            ME_PARTNER_DRAW_ON = 174,
+            ME_PARTNER_REPLACE = 175,
+            ME_BG_DRAW_ON = 176,
+            ME_BG_DRAW_OFF = 177,
+            ME_BG_BRIGHT_SET = 178,
+            ME_BG_BRIGHT_RESET = 179,
+            ME_COLOR_FILTER_ON = 180,
+            ME_COLOR_FILTER_OFF = 181,
+            ME_CHANGE_AWAKE2STAGE = 182,
+            ME_BODHIT_ON = 183,
+            ME_BODHIT_OFF = 184,
+            ME_DMGHIT_ON = 185,
+            ME_DMGHIT_OFF = 186,
+            ME_ATEMI_ON = 187,
+            ME_ATEMI_OFF = 188,
+            ME_LANDHIT_BEGIN = 189,
+            ME_LANDHIT_END = 190,
+            ME_HIT_PRM_CORRECT_START = 191,
+            ME_HIT_PRM_CORRECT_END = 192,
+            ME_CAPCEL_ATKHIT1_ON = 193,
+            ME_CAPCEL_ATKHIT1_OFF = 194,
+            ME_CAPCEL_ATKHIT2_ON = 195,
+            ME_CAPCEL_ATKHIT2_OFF = 196,
+            ME_CAPCEL_ATKHIT_OBJECT = 197,
+            ME_CAPCEL_ATKHIT3_ON = 198,
+            ME_CAPCEL_ATKHIT3_OFF = 199,
+            ME_CAPCEL_ATKHIT4_ON = 200,
+            ME_CAPCEL_ATKHIT4_OFF = 201,
+            ME_CAPCEL_ATKHIT5_ON = 202,
+            ME_CAPCEL_ATKHIT5_OFF = 203,
+            ME_ATKHIT_OFFSET = 204,
+            ME_ATKHIT2_OFFSET = 205,
+            ME_ATKHIT3_OFFSET = 206,
+            ME_ATKHIT4_OFFSET = 207,
+            ME_ATKHIT5_OFFSET = 208,
+            ME_ATKHIT_ON = 209,
+            ME_ATKHIT_OFF = 210,
+            ME_ATKHIT2_ON = 211,
+            ME_ATKHIT2_OFF = 212,
+            ME_ATKHIT3_ON = 213,
+            ME_ATKHIT3_OFF = 214,
+            ME_ATKHIT4_ON = 215,
+            ME_ATKHIT4_OFF = 216,
+            ME_ATKHIT5_ON = 217,
+            ME_ATKHIT5_OFF = 218,
+            ME_ATK_HIT_SIZE = 219,
+            ME_DRAWOBJ_DISABLE = 220,
+            ME_DRAWOBJ_ENABLE = 221,
+            ME_SCALE_CHANGE = 222,
+            ME_GLARE_NORMAL = 223,
+            ME_GLARE_NEAR = 224,
+            ME_GLARE_ANIM = 225,
+            ME_FOG_CHANGE_BEGIN = 226,
+            ME_FOG_CHANGE_COLOR = 227,
+            ME_FOG_CHANGE_RESET = 228,
+            ME_SET_SUBSITUTION_KEY = 229,
+            ME_ADD_HEIGHT_PLAYER = 230,
+            ME_USE_CHANGE_TEXTURE = 231,
+            ME_FACE_SUBSTITUTION_PARAM = 232,
+            ME_ENABLE_AFTER_ATTACH_OBJ = 233,
+            ME_DISABLE_AFTER_ATTACH_OBJ = 234,
+            ME_ENEMY_DISP_ON = 235,
+            ME_ENEMY_DISP_OFF = 236,
+            ME_USE_ANM_LIGHT_DIRC_BEGIN = 237,
+            ME_USE_ANM_LIGHT_DIRC_END = 238,
+            ME_DAMAGEDIRC_SET = 239,
+            ME_DAMAGEDIRC_SET_COORD = 240,
+            ME_DAMAGEDIRC_SET_COORD_REV = 241,
+            ME_DISPDIRC_REVERSE = 242,
+            ME_LOOK_ENEMY = 243,
+            ME_ENEMY_DISPDIRC_REVERSE = 244,
+            ME_LOOK_TARGET_ENEMY = 245,
+            ME_GUDOUBALL_DRAW = 246,
+            ME_GUDOUBALL_DRAW_OFF = 247,
+            ME_GUDOUBALL_DRAW_ALL = 248,
+            ME_GUDOUBALL_DRAW_OFF_ALL = 249,
+            ME_GUDOUBALL_SET_DMY = 250,
+            ME_GUDOUBALL_SET_INTERPOLATION = 251,
+            ME_GUDOUBALL_SET_INTERPOLATION_ALL = 252,
+            ME_MOT_UPGRADE = 253,
+            ME_MOT_UPGRADE_CANCEL = 254,
+            ME_ATKHIT_OFF_INSTANT = 255,
+            ME_ATKHIT_OFFSET_END_ANM_RESET = 256,
+            ME_ATKHIT2_OFFSET_END_ANM_RESET = 257,
+            ME_ATKHIT3_OFFSET_END_ANM_RESET = 258,
+            ME_ATKHIT4_OFFSET_END_ANM_RESET = 259,
+            ME_ATKHIT5_OFFSET_END_ANM_RESET = 260,
+            ME_GUDOUBALL_RATE_RANDOM = 261,
+            ME_GUDOUBALL_MAX_RATE = 262,
+            ME_FINISH_FRONT_DIRECTION = 263,
+            ME_SMASH_HIT_ON = 264,
+            ME_SMASH_HIT_OFF = 265,
+            ME_SMASH_HIT_OFF_INSTANT = 266,
+            ME_SMASH_HIT_OFFSET = 267,
+            ME_CREATE_DECAL = 268,
+            ME_CREATE_DECAL_LOOP = 269,
+            ME_MINI_KTY_SET_DMY = 270,
+            ME_MINI_KTY_SET_INTERPOLATION = 271,
+            ME_MINI_KTY_SET_INTERPOLATION_ALL = 272,
+            ME_MINI_KTY_RATE_RANDOM = 273,
+            ME_MINI_KTY_MAX_RATE = 274,
+            ME_DELETE_SKILL = 275,
+            ME_MOTION_BLUR_ON = 276,
+            ME_MOTION_BLUR_OFF = 277,
+            ME_CROSS_FADE_START = 278,
+            ME_ENTRY_ADD_THNDER_EFF = 279,
+            ME_ENTRY_ADD_WATER_EFF = 280,
+            ME_ENTRY_EFFECT = 281,
+            ME_SINK_ENTRY = 282,
+            ME_SINK_SETPARAM = 283,
+            ME_SINK_TO_FLOAT = 284,
+            ME_SINK_FLOAT_SETSPEED = 285,
+            ME_SET_CAPTION_AND_VOICE = 286,
+            ME_GUDOUBALL_OPACITY_CTRL = 287,
+            ME_FINISH_5TYY_WHISTLE = 288,
+            ME_REMINISCENEBATTLE_CUTIN_FRAME = 289,
+            ME_SUPERARMOR_ON = 290,
+            ME_SUPERARMOR_OFF = 291,
+            ME_PUT_DECAL_ON_GROUND = 292,
+            ME_UNIQUE_EVENT_ON = 293,
+            ME_UNIQUE_EVENT_OFF =294,
+            ME_8MTA_AWAKEAURA_ON = 295,
+            ME_8MTA_AWAKEAURA_OFF = 296,
+            ME_OFFSET_SCALE_THROW_EFFECT = 297,
+            ME_NOT_NOMALCOMBO_CAMERA_DIST = 298,
+            ME_NOT_NOMALCOMBO_CAMERA_DIST_RESET = 299 
+    };
+    struct
+        {
+        BigEndian();
+        int32 binarysize; // binary file total size minus first 4 bytes
+        LittleEndian();
+        char bynarytype[8];
+        byte headerpadding[0x28] <hidden= true>;
+        int32 entryCount;
+        byte headerpadding2[0xc] <hidden= true>;
+        
+            struct
+            {
+                char PL_anmName[32];
+                char AnmationName[48];
+                short Count;
+                int32 padding1;
+                short prmloadindex;
+                short cubeman;
+                short enableFaceanim;
+                short flag2;
+                short flag3;
+                short flag4;
+                short unk;
+                short unk2;
+                short unk3;
+                short direction;
+                int16 linkCondition1;
+                int16 linkCondition2;
+                int16 buttonpressEnable;
+                int16 buttonpressDisable;
+                int16 linkCondition3;
+                char PL_anmNamePrevious[32];
+                char PL_anmNameNext[32];
+                char PL_anmNameNextDmg[32];
+                
+                
+                struct
+                {
+                    
+                    char HitboxStrings[32];
+                    uint16 timing;
+                    MotionFunctions motionEvent; //enum
+                    local int posAfterMotionEvent = FTell();  // Save the current position after motionEvent
+                    local int isSpecialHandling = 0;  // Declare a local variable to track if the uint16 value is 65535 (0xFFFF)
+                    local int fileSize = FileSize();  // Get the file size
+                    local uint16 checkValue = 0; // Declare a local uint16 variable for the value we will read
+                    
+                    // Check the uint16 value located 0x60 bytes ahead
+                    if ((posAfterMotionEvent + 0x60 + 2) <= fileSize) // Ensure we're not reading beyond the file
+                        {
+                            // Move ahead by 0x60 bytes from the current position
+                            FSeek(posAfterMotionEvent + 0x60);
+                    
+                            // Automatically read the uint16 value at this position
+                            uint16 checkValue <hidden= true>;  // This will read from the file at the current position
+                    
+                            // Check if the uint16 value is 65535 (0xFFFF)
+                            if (checkValue == 0xFFFF)
+                            {
+                                isSpecialHandling = 1;  // Special handling if the value is 65535
+                            }
+                    
+                            // Reset the position back to continue parsing the structure
+                            FSeek(posAfterMotionEvent);
+                        }
+            
+                  
+                    uint16 param1;
+                    uint16 param2;
+                    uint16 param3;
+                    short  padding3;
+                    float  param4;
+                    byte   padding[0x10];   // 16 bytes of padding
+            
+                    // Handle differently if checkValue is 65535 (0xFFFF)
+                    if (isSpecialHandling)
+                    {
+                        struct  // Handle the special case for 0xFFFF found in the next 0x60 bytes
+                        {
+                            char   damageIdName[32];
+                            byte   damagePadding[0x22];  // 34 bytes of padding
+                            uint16 HitEffect;
+                            uint16 unk;                  // Usually FFFF
+                            uint16 DamageCondition;
+                            float  DamageAmount;
+                            float  PushAmount;
+                            float  VerticalPushAmount;
+                            float  unk2;
+                            uint16 HitAmount;
+                            uint16 HitFrequency;
+                            uint16 FreezeFrame;
+                            uint16 unk3;       
+                        }
+                        DamageSettings <optimize= false , read= damageIdName>;
+                    } 
+                }
+                PL_Motion_Sections[Count]<optimize= false , read= motionEvent>;                
+            }
+            PL_Anm_Sections[entryCount]<optimize= false ,read= PL_anmName>;     
+        }
+        PL_AnmStruct<optimize= false>;
+}
+pl_anmStruct<optimize= false>;
+
+typedef struct
+    {
+        BigEndian();
+        int32 Size; // binary file total size minus first 4 bytes
+        LittleEndian();
+        struct
+            {
+                char   SkillIndexName[32];
+                byte   Padding[0x20] <hidden = true>;  // 34 bytes of padding
+                char   FileName[32];
+                char   SkillName[32];
+                byte unk;
+                
+            }
+        ProjectilSlots [(Size / (0x81))] < read = SkillIndexName ,optimize= false>;
+        
+    }
+ProjectileEntries <optimize= false>;
+
+typedef struct
+{
+        BigEndian();
+        int32 Size; 
+        LittleEndian();
+        struct
+        {
+            uint16 FrameActionUnlock;      
+            uint16 ActionLength;          
+            uint16 Padding1;              
+            uint16 Unk1;                  
+            float CircleVelocity;          
+            float Unk2;                    
+            float CircleVelocityStrength;  
+            uint16 MovementFrequency;     
+            uint16 Padding2;              
+            float ForwardVelocity;         
+            uint32 padding3;
+        } 
+        GeneralMovement [Size / 0x20] < read = FrameActionUnlock, optimize= false>; 
+        
+}GeneralMovementEntries <optimize= false>;
+    
+typedef struct
+{
+    enum <int32> FileTypesIndex //Load Condition
+        {
+            Empty = 0,   
+            Common = 1,  
+            BaseAnimation = 2,   
+            AttackingAnimation = 3,
+            SupportAnimation = 4, 
+            Ninjutsu = 5,
+            Ougi = 6,
+            Awakening = 7,
+            unknow = 8,
+            Model = 9,
+            Accessorie = 10,
+            Effect = 11,
+            Param = 12,
+            Param2 = 13, 
+            ProjectileSkill = 14,      
+        };
+        
+    enum <int32> LoadConditionIndex //some of the load conditions
+        {
+            Always = 1,
+            Awaken = 5,
+            Ninjutsu_1 = 0xB,
+            Ninjutsu_2 = 0x13,
+            Ninjutsu_3 = 0x23,
+            Ninjutsu_4 = 0x43,
+            Ninjutsu_5 = 0x83,
+            Ninjutsu_6 = 0x2003,
+            Ougi1 = 0x101,
+            Ougi2 = 0x201,
+            Ougi3 = 0x401,
+            Ougi4 = 0x801,
+            
+        };
+        
+    BigEndian();
+    int32 Size; 
+    LittleEndian();
+    int32 Count;
+    
+    struct
+    {
+        int32 unk;
+        char   FolderName[32];
+        char   FileName[32];
+        FileTypesIndex FileType;  // This uses the enum to display file type
+        float  CostumeIndex;
+        LoadConditionIndex  LoadCondition;
+    } 
+    LoadedFileEntries[Count] <read = FileName, optimize = false>;
+}
+PrmLoadSettings<optimize= false>;
+
+typedef struct
+{
+    BigEndian();
+    int32 Size; 
+    LittleEndian();
+    int32 Count;
+     
+    struct
+    {
+        int32 Type;               // Offset 0x00 - Collision type
+        int32 State;              // Offset 0x04 - State of the collision
+        int32 BoneEnabler; 
+        int32 index;
+        char BoneName[64];        // Offset 0x10 - Name of the bone (string up to 64 bytes)
+        uint16 HurtboxRadius;     // Offset 0x50 - Hurtbox radius
+        int16 Hurtbox_Y_Pos;      // Offset 0x54 - Y position of the hurtbox
+        int16 Hurtbox_Z_Pos;      // Offset 0x58 - Z position of the hurtbox
+        int16 Padding;
+        int32 Padding;      
+    }
+    Collision [Count] <optimize= false>;
+}
+CollisionStruct<optimize= false>;

@@ -1,0 +1,73 @@
+//------------------------------------------------
+//--- 010 Editor v11.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+
+#include "/../include.h";
+
+//BigEndian();
+typedef struct {
+    
+    u32 AnmLength;
+    u32 FrameSize;
+    
+    u16 EntryCount;
+    u16 Looped;
+    
+    u16 ClumpCount;
+    u16 OtherEntryCount;
+    
+
+    u32 CoordCount;
+
+    local int i;
+
+    local int frameCount = AnmLength/FrameSize;
+    struct{
+    for (i = 0; i < ClumpCount; i++)
+        {
+            struct
+            {   
+                u32 ClumpIndex;
+                u16 BoneMaterialCount;
+                u16 ModelCount;
+                u32 BoneMaterialIndices[BoneMaterialCount];
+                u32 ModelIndices[ModelCount];
+                u32 Padding[ModelCount];
+    
+            } Clump;
+        }
+    }Clumps;
+
+    u32 OtherEntryChunkIndices[OtherEntryCount];
+
+// This is bones parents: first u32 is parent, second u32 is child (or current bone)
+    struct TCoordParent CoordParents[CoordCount];
+
+
+    struct{
+
+        for (i = 0; i < frameCount; i++)
+            {
+                struct
+                {   
+                    u16 unk1;
+                    u16 unk2;
+                    u32 frame;
+        
+                } Frame;
+            }
+    }Frames;
+    
+    
+
+} TNuccAnmStrm;

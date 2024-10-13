@@ -1,0 +1,69 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct 
+{
+    BigEndian();
+    uint Size;
+
+    LittleEndian();
+
+    uint Version;
+    uint Count;
+
+    uint64 FirstPointer <hidden= true>;
+
+    local int i;
+    local int Pos;
+
+    struct{
+        uint64 Offset;
+        
+        Pos = FTell();
+        FSeek(Offset + Pos - 8);
+        string UnionID;
+        
+        FSeek(Pos);
+        
+
+        uint Index;
+        float d;
+        float e;
+        uint AmountOfCharacters;
+        uint64 g;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+        uint CharaCode <format = hex>;
+
+        }
+        Section[Count] <optimize = false, read = Str("%s Index %d", UnionID, Index)>;
+}
+pairSpSkillCombinationParam <optimize= false>;
+
