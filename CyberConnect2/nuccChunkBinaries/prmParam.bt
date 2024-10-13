@@ -404,9 +404,9 @@ typedef struct
             }
             PL_Anm_Sections[entryCount]<optimize= false ,read= PL_anmName>;     
         }
-        PL_AnmStruct<optimize= false>;
+        PL_AnmStruct<optimize= false, read= bynarytype>;
 }
-pl_anmStruct<optimize= false>;
+Pl_AnmStructMain<optimize= false>;
 
 typedef struct
     {

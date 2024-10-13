@@ -254,7 +254,8 @@ typedef struct
             break;*/
         case "nuccChunkBinary":
             { 
-                struct binarystructs BinaryStructure;
+                struct nuccChunkBinary BinaryStructure;
+                BigEndian();
             }
             break;
         default:

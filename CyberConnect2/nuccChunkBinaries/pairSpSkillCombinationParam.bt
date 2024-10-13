@@ -64,6 +64,15 @@ typedef struct
 
         }
         Section[Count] <optimize = false, read = Str("%s Index %d", UnionID, Index)>;
+        
+        local int headerSize = 20;  
+        local int sectionSize = 112;  
+        local int remainingDataSize = Size - headerSize - (sectionSize * Count);  // Calculate remaining size
+        
+        
+        struct {
+            uchar Data[remainingDataSize +4];  // Adjust size dynamically based on remaining data
+        } extradata <optimize = false>;
 }
 pairSpSkillCombinationParam <optimize= false>;
 

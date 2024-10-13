@@ -19,53 +19,63 @@
 
 typedef struct
 {
-    // Compare chunkName to each suffix
-    if (EndsWith(chunkName, "prm_awa")  // character controls
-        || EndsWith(chunkName, "prm_skl")
-        || EndsWith(chunkName, "prm_awa")
-        || EndsWith(chunkName, "prm_awa2")
-        || EndsWith(chunkName, "prm_spl")
-        || EndsWith(chunkName, "prm_boss")
-        || EndsWith(chunkName, "prm_upgrade01")
-        || EndsWith(chunkName, "prm_upgrade02")
-        || EndsWith(chunkName, "prm_upgrade03")
-        || EndsWith(chunkName, "prm_boss01")
-        || EndsWith(chunkName, "prm_boss02")
-        || EndsWith(chunkName, "prm_boss03")
-        || EndsWith(chunkName, "prm_boss04"))
-   
-        {
-            struct pl_anmStruct VerBinary;
-            BigEndian();
-            // Further processing of MotBinary...
-        }
-    else if (EndsWith(chunkName, "prm_sklslot") ) // _x skill slots basically projectiles index
-        {
-             struct ProjectileEntries ProjectileSettings; 
-              BigEndian();
-             
-        } 
-    else if (EndsWith(chunkName, "prm_etc") ) //movement settings
-        {
-             struct GeneralMovementEntries MovementSettings; 
-              BigEndian();
-        }
-    else if (EndsWith(chunkName, "prm_hit") ) //for hurtspheres and hitspheres
-        {
-             struct CollisionStruct CollisionSettings; 
-              BigEndian();
-        } 
-    else if (EndsWith(chunkName, "prm_load") )
-        {
-             struct PrmLoadSettings Files; 
-              BigEndian();
-        } 
-    else
-    {
-        uchar Data[Size];
-    }
     
-}binarystructs<optimize= false>;
+    
+    switch (chunkName)     
+        {
+            
+            case ("pairSpSkillCombinationParam"):
+                struct pairSpSkillCombinationParam TeamOugiIndex;
+                break;
+            default:
+                // Compare chunkName to each suffix
+                if (EndsWith(chunkName, "prm_awa")  // character controls
+                    || EndsWith(chunkName, "prm_skl")
+                    || EndsWith(chunkName, "prm_awa")
+                    || EndsWith(chunkName, "prm_awa2")
+                    || EndsWith(chunkName, "prm_spl")
+                    || EndsWith(chunkName, "prm_boss")
+                    || EndsWith(chunkName, "prm_upgrade01")
+                    || EndsWith(chunkName, "prm_upgrade02")
+                    || EndsWith(chunkName, "prm_upgrade03")
+                    || EndsWith(chunkName, "prm_boss01")
+                    || EndsWith(chunkName, "prm_boss02")
+                    || EndsWith(chunkName, "prm_boss03")
+                    || EndsWith(chunkName, "prm_boss04"))
+               
+                    {
+                        struct Pl_AnmStructMain VerBinary;
+                        
+                        // Further processing of MotBinary...
+                    }
+                else if (EndsWith(chunkName, "prm_sklslot") ) // _x skill slots basically projectiles index
+                    {
+                         struct ProjectileEntries ProjectileSettings; 
+                          
+                         
+                    } 
+                else if (EndsWith(chunkName, "prm_etc") ) //movement settings
+                    {
+                         struct GeneralMovementEntries MovementSettings; 
+                         
+                    }
+                else if (EndsWith(chunkName, "prm_hit") ) //for hurtspheres and hitspheres
+                    {
+                         struct CollisionStruct CollisionSettings; 
+                          
+                    } 
+                else if (EndsWith(chunkName, "prm_load") )
+                    {
+                         struct PrmLoadSettings Files; 
+                          
+                    } 
+                else
+                {
+                    uchar Data[Size];
+                }
+            break;
+        }
+}nuccChunkBinary<optimize= false>;
 
 int EndsWith(string str, string suffix)
 {
