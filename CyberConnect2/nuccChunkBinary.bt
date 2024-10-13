@@ -14,6 +14,12 @@
 #include "nuccChunkBinaries/pairSpSkillCombinationParam.bt"
 #include "nuccChunkBinaries/prmParam.bt"
 #include "nuccChunkBinaries/characterSelectParam.bt"
+#include "nuccChunkBinaries/acc.bin.bt"
+#include "nuccChunkBinaries/accessoriesParam.bt"
+#include "nuccChunkBinaries/accessoryExceptionParam.bt"
+#include "nuccChunkBinaries/accessoryNotAttachParam.bt"
+
+
 
 
 
@@ -28,6 +34,15 @@ typedef struct
             case ("pairSpSkillCombinationParam"):
                 struct pairSpSkillCombinationParam TeamOugiIndex;
                 break;
+            case ("accessoryExceptionParam"):
+                struct accessoryExceptionParam accessoryException;
+                break;
+            case ("accessoryNotAttachParam"):
+                struct accessoryNotAttachParam accessoryNotAttach;
+                break;
+            case ("accessoryParam"):
+                struct accessoryParam AccessoryParam;
+                break; 
             case ("characterSelectParam"):
                 struct characterSelectStruct CharacterSelectData;
                 break;
@@ -72,6 +87,11 @@ typedef struct
                 else if (EndsWith(chunkName, "prm_load") )
                     {
                          struct PrmLoadSettings Files; 
+                          
+                    } 
+                else if (EndsWith(chunkName, "acc") )
+                    {
+                         struct AccesoriesSettings Accessory; 
                           
                     } 
                 else

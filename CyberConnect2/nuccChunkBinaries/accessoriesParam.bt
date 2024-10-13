@@ -1,0 +1,76 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+    BigEndian();
+    
+    local int startPos = FTell(); 
+    
+    uint FileSize;
+    
+    LittleEndian();
+    
+    uint Version;
+    uint Count;
+    FSkip(8);
+    local int Pos;
+    
+    
+    struct
+    {
+        uint64 MessageIdOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + MessageIdOffset - 8);
+        string MessageId;
+        FSeek(Pos);
+        
+        uint64 AccessoryIdOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + AccessoryIdOffset - 8);
+        string AccessoryId;
+        FSeek(Pos);
+        
+        uint Index;
+        uint Cost;
+        
+        uint64 AccessoryIconOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + AccessoryIconOffset - 8);
+        string AccessoryIcon;
+        FSeek(Pos);
+        
+        uint64 AccessoryCodeOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + AccessoryCodeOffset - 8);
+        string AccessoryCode;
+        FSeek(Pos);
+        
+        int unk1;
+    
+        int32 UnlockCondition;
+        
+    }
+    Accessory[Count] <optimize = false, read= Str("%s %s %s",AccessoryId, MessageId, AccessoryCode)>;
+    
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+    
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+}
+accessoryParam;
+

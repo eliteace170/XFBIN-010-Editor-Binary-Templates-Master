@@ -1,0 +1,71 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct 
+
+{
+    BigEndian();
+    local int startPos = FTell(); 
+    uint FileSize;
+    
+    LittleEndian();
+
+    uint Version;
+    uint Count;
+    FSkip(8);
+    local int Pos;
+
+    struct{
+        uint64 offset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + offset - 8);
+        string AccessoryPostion;
+        FSeek(Pos);
+        
+        uint64 offset <hidden = false>;
+        Pos = FTell();
+        FSeek(Pos + offset - 8);
+        string AttachBone;
+        FSeek(Pos);
+        
+        uint64 unk0;
+        
+        uint64 offset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos + offset - 8);
+        string string3;
+        FSeek(Pos);
+        
+        uint64 unk1;
+        
+        uint unk2;
+        
+        float Position[3];
+        float Rotation[3];
+        float unk[3];
+        float Scale[3];
+        
+        uint unk;
+    }Acc[Count] <optimize=false, read= AccessoryPostion>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+
+}AccesoriesSettings;

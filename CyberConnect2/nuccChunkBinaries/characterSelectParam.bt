@@ -13,20 +13,19 @@
 typedef struct 
 {
     BigEndian();
+    local int startPos = FTell(); 
+    
     uint FileSize;
-
     LittleEndian();
-
     uint Version;
     uint Count;
     FSkip(8);
-
     local int Pos;
-
     local int Count2 = 0;
 
 
-    struct{
+    struct
+    {
         uint64 CharacterCodeOffset <hidden = true>;
         Pos = FTell();
         FSeek(Pos + CharacterCodeOffset - 8);
@@ -92,16 +91,17 @@ typedef struct
         }
         Count2 += 1;
         
-    }CharacterSelect[Count] <optimize=false, read= Str("%s (%s)  %d",CharacterCode, DictionaryCode, DictionaryIndex)>;
+    }
+    CharacterSelect[Count] <optimize=false, read= Str("%s (%s)  %d",CharacterCode, DictionaryCode, DictionaryIndex)>;
 
-    local int headerSize = 20;  
-    local int sectionSize = 320;  
-    local int remainingDataSize = FileSize - headerSize - (sectionSize * Count);  // Calculate remaining size
-    
-    
-    struct 
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
     {
-        uchar Data[remainingDataSize + 4];  // Adjust size dynamically with additional 4 bytes
-    } StringEntriesSection <optimize = false>;
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
 } 
 characterSelectStruct <optimize = false>;
