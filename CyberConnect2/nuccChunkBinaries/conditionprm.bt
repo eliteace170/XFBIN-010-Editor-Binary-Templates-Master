@@ -1,0 +1,71 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: Conditionprm
+//   Authors: HydraBladeZ
+//   Version: 1.0
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+    BigEndian();
+    uint Size;
+
+    LittleEndian();
+
+    uint count;
+
+    local int i;
+
+    for (i=0; i<count; i++)
+    {
+        struct
+        {
+            char ConditionName[64];
+
+            int Duration;
+            float AttackModifier;
+            float DefenseModifier;
+            float SpeedModifier;
+            float SupportAttackModifier;
+            float LifeRecovery;
+            float LifeDrain;
+            float ChakraRecoverySpeed;
+            float EnemyChakraLimit;
+            float ChakraRecoveryPoints;
+            float EnemyChakraShave;
+            float ChakraDrain;
+            float ChakraRegeneration;
+            float ChakraConsumption;
+            float SupportFillRate;
+            float StormGaugeFillRate;
+            float GuardDamageModifier;
+            float SubtitutionFillRate;
+            short PROJ_THROUGH;
+            short AutomaticSubtitution;
+            short ChakraSeal;
+            short Sleep;
+            short Stun;
+            short EffectFlag;
+
+            struct{
+                float R;
+                float G;
+                float B;
+            }ColorRGB <read= Str("(R%f, G%f, B%f)", R, G, B)>;
+            float Opacity;
+            float EffectInterval;
+            float unk23;
+            float unk24;
+            /*
+            if (unk23 > 0)
+            {
+                Printf(Str("value = %d in %s (%d)\n",unk23, ConditionName, i));
+            }*/
+        }Condition <read = ConditionName>;
+    }
+}conditionprm;

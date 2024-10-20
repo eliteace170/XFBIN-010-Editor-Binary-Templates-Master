@@ -1,0 +1,61 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: Hydra, Lilith, Meouch
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct 
+{
+    BigEndian();
+    local int startPos = FTell(); 
+    uint FileSize;
+
+    LittleEndian();
+
+    int Version;
+    uint Count;
+    uint64 FirstPointer <hidden= false>;
+
+    local int Pos;
+
+
+    struct
+    {
+        uint64 costumeOffset <hidden= false>;
+        Pos = FTell();
+        FSeek(Pos - 8 + costumeOffset);
+        string costumeString;
+        FSeek(Pos);
+
+        uint Index;
+        uint PresetID;
+
+        uint64 offset0<hidden= false>;
+        Pos = FTell();
+        FSeek(Pos - 8 + offset0);
+        string messageId;
+        FSeek(Pos);
+
+        uint ItemType;
+        uint Cost;
+        uint64 UnlockCondition;
+    }
+    Costume[Count] <optimize= false, read=Str("%s (%d) %d", costumeString, PresetID, UnlockCondition)>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+
+}costumeParam;

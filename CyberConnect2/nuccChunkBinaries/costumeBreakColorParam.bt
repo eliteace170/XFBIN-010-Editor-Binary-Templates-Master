@@ -1,0 +1,34 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+    BigEndian();
+    uint FileSize;
+
+    LittleEndian();
+    uint Version;
+    uint Count;
+    FSkip(8);
+    local int Pos;
+
+    struct
+    {
+        uint PresetID;
+        uint RGBA_P1[4];
+        uint RGBA_P2[4];
+        uint RGBA_P3[4];
+        uint RGBA_P4[4];
+    }
+    Color[Count] <optimize= false, read = PresetID>;
+
+}costumeBreakColorParam;

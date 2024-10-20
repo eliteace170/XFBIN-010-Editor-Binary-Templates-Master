@@ -18,19 +18,19 @@
 #include "nuccChunkBinaries/accessoriesParam.bt"
 #include "nuccChunkBinaries/accessoryExceptionParam.bt"
 #include "nuccChunkBinaries/accessoryNotAttachParam.bt"
-
-
-
-
-
+#include "nuccChunkBinaries/CharaPoseParam.bt"
+#include "nuccChunkBinaries/charaTagParam.bt"
+#include "nuccChunkBinaries/chatStampParam.bt"
+#include "nuccChunkBinaries/collectNameParam.bt"
+#include "nuccChunkBinaries/conditionprm.bt"
+#include "nuccChunkBinaries/costumeBreakColorParam.bt"
+#include "nuccChunkBinaries/costumeBreakParam.bt"
+#include "nuccChunkBinaries/costumeParam.bt"
 
 typedef struct
-{
-    
-    
+{  
     switch (chunkName)     
-        {
-            
+        { 
             case ("pairSpSkillCombinationParam"):
                 struct pairSpSkillCombinationParam TeamOugiIndex;
                 break;
@@ -46,12 +46,34 @@ typedef struct
             case ("characterSelectParam"):
                 struct characterSelectStruct CharacterSelectData;
                 break;
-
+            case ("CharaPoseParam"):
+                struct CharaPoseParam CharaPoseData;
+                break;
+            case ("charaTagParam"):
+                struct charaTagParam charaTagData;
+                break;
+            case ("chatStampParam"):
+                struct chatStampParam chatStampData;
+                break;
+            case ("collectNameParam"):
+                struct collectNameParam collectNameData;
+                break;
+            case ("conditionprm"):
+                struct conditionprm ConditionPrmData;
+                break;
+            case ("costumeBreakColorParam"):
+                struct costumeBreakColorParam costumeBreakColor;
+                break;
+            case ("costumeBreakParam"):
+                struct costumeBreakParam costumeBreakData;
+                break;
+            case ("costumeParam"):
+                struct costumeParam costumeParamData;
+                break;
             default:
                 // Compare chunkName to each suffix
                 if (EndsWith(chunkName, "prm_awa")  // character controls
                     || EndsWith(chunkName, "prm_skl")
-                    || EndsWith(chunkName, "prm_awa")
                     || EndsWith(chunkName, "prm_awa2")
                     || EndsWith(chunkName, "prm_spl")
                     || EndsWith(chunkName, "prm_boss")
@@ -61,38 +83,31 @@ typedef struct
                     || EndsWith(chunkName, "prm_boss01")
                     || EndsWith(chunkName, "prm_boss02")
                     || EndsWith(chunkName, "prm_boss03")
-                    || EndsWith(chunkName, "prm_boss04"))
-               
+                    || EndsWith(chunkName, "prm_boss04"))            
                     {
                         struct Pl_AnmStructMain VerBinary;
                         
-                        // Further processing of MotBinary...
                     }
                 else if (EndsWith(chunkName, "prm_sklslot") ) // _x skill slots basically projectiles index
                     {
                          struct ProjectileEntries ProjectileSettings; 
-                          
-                         
+                   
                     } 
                 else if (EndsWith(chunkName, "prm_etc") ) //movement settings
                     {
                          struct GeneralMovementEntries MovementSettings; 
-                         
                     }
                 else if (EndsWith(chunkName, "prm_hit") ) //for hurtspheres and hitspheres
                     {
-                         struct CollisionStruct CollisionSettings; 
-                          
+                         struct CollisionStruct CollisionSettings;   
                     } 
                 else if (EndsWith(chunkName, "prm_load") )
                     {
-                         struct PrmLoadSettings Files; 
-                          
+                         struct PrmLoadSettings Files;     
                     } 
                 else if (EndsWith(chunkName, "acc") )
                     {
-                         struct AccesoriesSettings Accessory; 
-                          
+                         struct AccesoriesSettings Accessory;         
                     } 
                 else
                 {

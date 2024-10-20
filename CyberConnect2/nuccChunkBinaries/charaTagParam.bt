@@ -1,0 +1,51 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct 
+
+{
+    BigEndian();
+
+    local int startPos = FTell();
+
+    uint FileSize;
+
+    LittleEndian();
+
+    int Version;
+    uint Count;
+    uint64 FirstPointer <hidden= true>;
+
+    local int Pos;
+
+    struct{
+    uint64 offset0;
+    Pos = FTell();
+    FSeek(Pos - 8 + offset0);
+    string CharaCode;
+    FSeek(Pos);
+
+    uint64 unk;
+    }Tag[Count] <optimize=false, read= Str("%s (%d)", CharaCode, unk)>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+}
+charaTagParam;

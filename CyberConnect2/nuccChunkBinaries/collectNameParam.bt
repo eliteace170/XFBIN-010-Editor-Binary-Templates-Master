@@ -1,0 +1,93 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct 
+{
+    
+    BigEndian();
+    local int startPos = FTell(); 
+    uint FileSize;
+
+    LittleEndian();
+
+    int Version;
+    uint Count;
+    uint64 FirstPointer <hidden= true>;
+
+    local int Pos;
+
+
+    struct
+    {
+        uint64 nameOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + nameOffset);
+        string nameString;
+        FSeek(Pos);
+
+        uint64 Index;
+
+        uint64 Offset1 <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + Offset1);
+        string String1;
+        FSeek(Pos);
+
+        uint64 Offset2 <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + Offset2);
+        string String2;
+        FSeek(Pos);
+
+        uint64 Offset3 <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + Offset3);
+        string String3;
+        FSeek(Pos);
+
+        uint64 unk;
+
+        uint64 Offset4 <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + Offset4);
+        string String4;
+        FSeek(Pos);
+
+        uint unk1;
+        uint unk2;
+
+
+        uint unk99;
+
+
+        int UnlockCondition;
+        int unk3;
+        int unk4;
+        int unk5;
+        int unk6;
+        int unk7;
+        int unk8;
+        int unk9;
+        int unk10;
+    }
+    Name[Count]<optimize= false, read = Str("%s (%s)",nameString, String4)>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+}collectNameParam;

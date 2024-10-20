@@ -1,0 +1,53 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct 
+{
+    BigEndian();
+    local int startPos = FTell(); 
+    uint FileSize;
+
+    LittleEndian();
+
+    int Version;
+    uint Count;
+    FSkip(8);
+    local int Pos;
+
+    struct
+    {
+        int CharaCode <format= hex>;
+        uint CostumeIndex;
+
+        uint64 Pathoffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + Pathoffset);
+        string Path;
+        FSeek(Pos);
+
+        uint AwakeningModelFlag;
+        uint ClonesFlag;
+        uint64 ClonesCount;
+    }
+    costumeBreak[Count] <optimize= false, read= Str("Code Index %d (Costume %d)", CharaCode, CostumeIndex)>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+
+}costumeBreakParam;

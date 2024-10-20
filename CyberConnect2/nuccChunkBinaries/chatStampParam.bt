@@ -1,0 +1,64 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+    BigEndian();
+     
+    local int startPos = FTell();
+
+    uint FileSize;
+
+    LittleEndian();
+
+    int Version;
+    uint Count;
+    uint64 FirstPointer <hidden= true>;
+
+    local int Pos;
+
+    struct
+    {
+        uint64 StampOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + StampOffset);
+        string StampString;
+        FSeek(Pos);
+        
+        uint64 IconOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + IconOffset);
+        string IconString;
+        FSeek(Pos);
+        
+        uint64 messageOffset <hidden = true>;
+        Pos = FTell();
+        FSeek(Pos - 8 + messageOffset);
+        string messageID;
+        FSeek(Pos);
+        
+        uint Cost;
+        uint UnlockCondition;
+    }
+    Stamp[Count] <optimize= false, read = StampString>;
+
+    local int endPos = FTell();
+    local int sectionSize = endPos - startPos;
+    local int remainingSize = (FileSize + 4) - sectionSize ;
+
+    struct
+    {
+        uchar Data;
+    }
+    StringEntriesSectior[remainingSize];
+}
+chatStampParam;
