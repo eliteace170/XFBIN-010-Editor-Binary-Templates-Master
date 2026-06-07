@@ -1,0 +1,62 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+
+local int Pos;
+
+
+struct{
+    uint64 pspCodeOffset <hidden= true>;
+    Pos = FTell();
+    FSeek(Pos - 8 + pspCodeOffset);
+    string pspCode;
+    FSeek(Pos);
+    
+
+    uint64 Flag;
+    
+    /*
+    uint64 partnerOffset <hidden= true>;
+    Pos = FTell();
+    FSeek(Pos - 8 + partnerOffset);
+    string partnerCode;
+    FSeek(Pos);
+
+    */
+    
+    uint64 Padding1 <hidden= true>;
+
+    uint64 accessoryOffset <hidden= true>;
+    Pos = FTell();
+    FSeek(Pos - 8 + accessoryOffset);
+    string accessoryCode;
+    FSeek(Pos);
+    
+    float PositionAndLighting[45];
+    
+    uint Padding2 <hidden= true>;
+    
+    //Printf("%d \n", Flag);
+    
+}netMenu[Count] <optimize = false, read = Str("%s, %s", pspCode, accessoryCode)>;
+}
+netMenuParam <optimize = false>;

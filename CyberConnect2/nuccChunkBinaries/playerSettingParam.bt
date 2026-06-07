@@ -1,0 +1,61 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+
+struct{
+
+uint presetID;
+uint Characode;
+int CostumeID;
+uint unk;
+
+uint64 CharIdPointer <hidden = false>;
+Pos = FTell();
+FSeek(Pos + CharIdPointer - 8);
+string CharacterID;
+FSeek(Pos);
+
+int DefaultJutsu;
+int DefaultUJ; //Ultimate Jutsu
+
+uint64 messageId1Pointer <hidden = false>;
+Pos = FTell();
+FSeek(Pos + messageId1Pointer - 8);
+string MessageId1;
+FSeek(Pos);
+
+uint64 messageId2Pointer <hidden = false>;
+Pos = FTell();
+FSeek(Pos + messageId2Pointer - 8);
+string MessageId2;
+FSeek(Pos); 
+
+int dlcID;
+int MainPresetID;
+int CharaCodeID;
+int unk1;
+
+}PlayerSetting[Count] <optimize= false, read= Str("%s (%d)", CharacterID, presetID)>;
+
+}
+playerSettingParam <optimize = false>;

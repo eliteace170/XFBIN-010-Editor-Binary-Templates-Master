@@ -19,109 +19,106 @@ typedef struct
 {
     struct TAnmCoord Coord;
 
-    u16 EntryFormat;
+    u16 EntryFormat <read=ReadTStrmEntryFormat>;
     u16 EntrySize;
-	u32 unk;
+    u32 CurveType <read=ReadTStrmCurveType>;
 
     local int i;
 
     struct
 	{
+        local u16 EntryFormatForRead = EntryFormat;
+        local u32 CurveTypeForRead = CurveType;
+        local int EntryDataSize = EntrySize >= 4 ? EntrySize - 4 : 0;
+
         if (EntryFormat == 1){ //Bone Entry
-            struct{
-                f32 Position_X;
-                f32 Position_Y;
-                f32 Position_Z;
-            } Position;
-            struct{
-                f32 QuaternionW;
-                f32 QuaternionX;
-                f32 QuaternionY;
-                f32 QuaternionZ;
-            } Rotation;
-            struct{
-                f32 Scale_X;
-                f32 Scale_Y;
-                f32 Scale_Z;
-            } Scale;
-            f32 Toggle_Opacity;
+            struct TVector3 BonePosition;
+            struct TVector4 BoneRotation;
+            struct TVector3 BoneScale;
+            f32 BoneOpacity;
 
         }
         else if (EntryFormat == 2){ //Camera Entry
-            struct{
-                f32 Position_X;
-                f32 Position_Y;
-                f32 Position_Z;
-            } Position;
-            struct{
-                f32 QuaternionW;
-                f32 QuaternionX;
-                f32 QuaternionY;
-                f32 QuaternionZ;
-            } Rotation;
-            f32 Camera_FOV;
-            f32 unk1;
-            f32 unk2;
-            f32 unk3;
+            struct TVector3 CameraPosition;
+            struct TVector4 CameraRotation;
+            f32 CameraFOV;
+            struct TVector3 CameraScale;
 
         }
         else if (EntryFormat == 4){ //Material Entry
-            f32 MaterialValue_1; //possibly related to UV coords
-            f32 MaterialValue_2; //possibly related to UV coords
-            f32 MaterialValue_3;
-            f32 MaterialValue_4;
-            f32 MaterialValue_5;
-            f32 MaterialValue_6;
-            f32 MaterialValue_7;
-            f32 MaterialValue_8;
-            f32 MaterialValue_9; //possibly related to UV coords
-            f32 MaterialValue_10; //possibly related to UV coords
-            f32 MaterialValue_11;
-            f32 MaterialValue_12;
-            f32 MaterialValue_13;
-            f32 MaterialValue_14;
-            f32 MaterialValue_15;
-            f32 MaterialValue_16;
+            f32 MaterialValues[16] <optimize=false>;
                 
         }
 		else if (EntryFormat == 5){ //LightDirc Entry
-            struct{
-                f32 Color_R;
-                f32 Color_G;
-                f32 Color_B;
-            } HEX_Color;
-            f32 Light_strength;
-            struct{
-                f32 QuaternionW;
-                f32 QuaternionX;
-                f32 QuaternionY;
-                f32 QuaternionZ;
-            } Rotation;
+            struct TVector3 DirectionalLightColor;
+            f32 DirectionalLightIntensity;
+            struct TVector4 DirectionalLightDirection;
         }
         else if (EntryFormat == 6){ //LightPoint Entry
-            struct{
-                f32 Color_R;
-                f32 Color_G;
-                f32 Color_B;
-            } HEX_Color;
-            struct{
-                f32 Position_X;
-                f32 Position_Y;
-                f32 Position_Z;
-            } Position;
-            struct{
-                f32 Light_strength;
-                f32 Light_Radius1;
-                f32 Light_Radius2;
-            } LightSettings;
+            struct TVector3 PointLightColor;
+            struct TVector3 PointLightPosition;
+            f32 PointLightIntensity;
+            f32 PointLightRange;
+            f32 PointLightFalloff;
         }
         else if (EntryFormat == 8){ //Ambient Entry
-            struct{
-                f32 Color_R;
-                f32 Color_G;
-                f32 Color_B;
-            } HEX_Color;
-            f32 Light_strength;
+            struct TVector4 AmbientColor;
         }
-	} TAnmFrameCurve;
+        else
+        {
+            u8 EntryData[EntryDataSize] <optimize=false>;
+        }
+	} TAnmFrameCurve <read=ReadTStrmFrameCurve(this.EntryFormatForRead, this.CurveTypeForRead)>;
 } TNuccAnmStrmFrame <optimize=false>;
+
+string ReadTStrmEntryFormat(u16& value)
+{
+    local string str;
+
+    switch (value)
+    {
+        case 0x01:
+            return "Bone";
+        case 0x02:
+            return "Camera";
+        case 0x04:
+            return "Material";
+        case 0x05:
+            return "LightDirc";
+        case 0x06:
+            return "LightPoint";
+        case 0x08:
+            return "Ambient";
+    }
+
+    SPrintf(str, "0x%02X", value);
+    return str;
+}
+
+string ReadTStrmCurveType(u32& value)
+{
+    local string str;
+
+    switch (value)
+    {
+        case 0x07:
+            return "Camera";
+        case 0x0F:
+            return "Bone";
+        case 0xFFFF:
+            return "Material";
+    }
+
+    SPrintf(str, "0x%X", value);
+    return str;
+}
+
+string ReadTStrmFrameCurve(u16 entryFormat, u32 curveType)
+{
+    local string str;
+    local string entryName = ReadTStrmEntryFormat(entryFormat);
+    local string curveName = ReadTStrmCurveType(curveType);
+
+    SPrintf(str, "%s / %s", entryName, curveName);
+    return str;
+}

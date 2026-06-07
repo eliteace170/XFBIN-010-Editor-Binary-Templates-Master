@@ -1,0 +1,87 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: awakeAura.bin
+//   Authors: 
+//   Version: 1.0
+//   Purpose: parse
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+uint size;
+LittleEndian();
+uint Version;
+uint Count;
+uint64 type;
+local int Pos;
+local int i;
+enum <uint> ConditionType 
+    {
+        None = 0,   
+        GroundPossition = 1, 
+        susanoFunction = 2         
+    };
+    
+for (i = 0; i < Count; i++)
+{
+    struct
+    {
+        uint64 CharacodeOffset;
+        if (CharacodeOffset > 0)
+        {
+	        Pos = FTell();
+	        FSeek(Pos + CharacodeOffset - 8);
+	        string Characode_name;
+	        FSeek(Pos);
+        }
+        uint Normal_State;
+        uint Awaken_State;
+        uint64 SkillFileOffset;
+        if (SkillFileOffset > 0)
+        {
+	        Pos = FTell();
+	        FSeek(Pos + SkillFileOffset - 8);
+	        string SkillFile_name;
+	        FSeek(Pos);
+        }
+        uint64 EffectOffset;
+        if (EffectOffset > 0)
+        {
+	        Pos = FTell();
+	        FSeek(Pos + EffectOffset - 8);
+	        string EffectOffset_name;
+	        FSeek(Pos);
+        }
+        uint Spawn1_playermodel;
+        uint unk1;
+        uint64 Spawn1Offset;
+        if (Spawn1Offset > 0)
+        {
+	        Pos = FTell();
+	        FSeek(Pos + Spawn1Offset - 8);
+	        string Spawn1Offset_name;
+	        FSeek(Pos);
+        }
+        uint Spawn2_playermodel;
+        uint unk2;
+        uint64 Spawn2Offset;
+        if (Spawn2Offset > 0)
+        {
+	        Pos = FTell();
+	        FSeek(Pos + Spawn2Offset - 8);
+	        string Spawn2Offset_name;
+	        FSeek(Pos);
+        }
+        
+        ConditionType Condition;
+        uint unk3;
+        
+    }
+    awakeauraentries<read =Characode_name, optimize = false>;
+};
+}
+awakeaura <optimize = false>;

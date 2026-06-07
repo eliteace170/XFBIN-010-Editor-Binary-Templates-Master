@@ -30,8 +30,8 @@ typedef struct
     u16 LoopFlag;
     u16 ClumpCount;
     u16 OtherEntryCount;
-
-    u32 CoordCount;
+    u16 OtherIndexCount;
+    u16 CoordCount;
 
     local int i;
 
@@ -70,7 +70,7 @@ typedef struct
     }Clumps;
     
 
-    u32 OtherEntryChunkIndices[OtherEntryCount];
+    u32 OtherEntryChunkIndices[OtherEntryCount + OtherIndexCount];
 
     // This is bones parents: first u32 is parent, second u32 is child (or current bone)
     struct
@@ -79,8 +79,8 @@ typedef struct
         {
             struct 
             {   
-                struct TAnmCoord Parent <read = ReadTAnmCoord(this.ClumpIndex, parentof(parentof(parentof(this))))>;
-                struct TAnmCoord Child <read = ReadTAnmCoord(this.ClumpIndex,  parentof(parentof(parentof(this))))>;
+                struct TAnmCoord Parent <read = ReadTAnmCoordParent(this, parentof(parentof(parentof(this))))>;
+                struct TAnmCoord Child <read = ReadTAnmCoord(this,  parentof(parentof(parentof(this))))>;
 
             } CoordParent;
             
@@ -95,6 +95,8 @@ typedef struct
 
     }
 } TNuccAnm;
+
+
 
 typedef struct
 {
@@ -112,16 +114,16 @@ typedef struct
 typedef struct
 {
     u16 CurveIndex;
-    u16 CurveFormat;
+    u16 CurveFormat <read=ReadTAnmCurveFormat>;
     u16 FrameCount;
-    u16 CurveFlags; // Could be just "curve data size"
-} TCurveHeader;
+    s16 CurveFlags; // Purpose is still unclear; Blender-XFBIN-Importer treats this as signed.
+} TCurveHeader <read=ReadTCurveHeader>;
 
 typedef struct
 {
     struct TAnmCoord Coord;
 
-    u16 EntryFormat;
+    u16 EntryFormat <read=ReadTAnmEntryFormat>;
     u16 CurveCount;
 
     struct TCurveHeader CurveHeaders[CurveCount];
@@ -131,30 +133,361 @@ typedef struct
     for (i = 0; i < CurveCount; i++)
     {
         struct {
+            local u16 EntryFormatForRead = EntryFormat;
+            local u16 CurveIndexForRead = CurveHeaders[i].CurveIndex;
+            local u16 CurveFormatForRead = CurveHeaders[i].CurveFormat;
+
             switch (CurveHeaders[i].CurveFormat)
             {
                 case 0x05:
                 case 0x08:
+                case 0x09:
                 case 0x15:
                 case 0x1A:
-                    struct TVector3 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    switch (EntryFormat)
+                    {
+                        case 0x01:
+                            if (CurveHeaders[i].CurveFormat == 0x08 || CurveHeaders[i].CurveFormat == 0x09)
+                            {
+                                struct TVector3 BoneRotationEuler[CurveHeaders[i].FrameCount] <optimize=false>;
+                            }
+                            else
+                            {
+                                switch (CurveHeaders[i].CurveIndex)
+                                {
+                                    case 0:
+                                        struct TVector3 BoneLocation[CurveHeaders[i].FrameCount] <optimize=false>;
+                                        break;
+                                    case 2:
+                                        struct TVector3 BoneScale[CurveHeaders[i].FrameCount] <optimize=false>;
+                                        break;
+                                    default:
+                                        struct TVector3 BoneVector3[CurveHeaders[i].FrameCount] <optimize=false>;
+                                        break;
+                                }
+                            }
+                            break;
+                        case 0x02:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TVector3 CameraLocation[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TVector3 CameraVector3[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x05:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TVector3 DirectionalLightColor[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    struct TVector3 DirectionalLightRotation[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TVector3 DirectionalLightVector3[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x06:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TVector3 PointLightColor[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    struct TVector3 PointLightLocation[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TVector3 PointLightVector3[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TVector3 AmbientColor[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TVector3 AmbientVector3[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        default:
+                            struct TVector3 Vector3Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                            break;
+                    }
                     break;
                 case 0x06:
-                    struct TKeyframeVector3 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                case 0x07:
+                    switch (EntryFormat)
+                    {
+                        case 0x01:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TKeyframeVector3 BoneLocationKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    struct TKeyframeVector3 BoneScaleKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector3 BoneVector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TKeyframeVector3 CameraLocationKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector3 CameraVector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x05:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TKeyframeVector3 DirectionalLightColorKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    struct TKeyframeVector3 DirectionalLightRotationKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector3 DirectionalLightVector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x06:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    struct TKeyframeVector3 PointLightColorKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    struct TKeyframeVector3 PointLightLocationKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector3 PointLightVector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        default:
+                            struct TKeyframeVector3 Vector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                            break;
+                    }
                     break;
                 case 0x0A:
-                    struct TKeyframeVector4 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    switch (EntryFormat)
+                    {
+                        case 0x01:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 1:
+                                    struct TKeyframeVector4 BoneRotationQuaternionKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector4 BoneVector4Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 1:
+                                    struct TKeyframeVector4 CameraRotationQuaternionKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector4 CameraVector4Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x05:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 2:
+                                    struct TKeyframeVector4 DirectionalLightRotationQuaternionKeyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    struct TKeyframeVector4 DirectionalLightVector4Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        default:
+                            struct TKeyframeVector4 Vector4Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
+                            break;
+                    }
                     break;
                 case 0x0B:
                 case 0x16:
                 case 0x18:
-                    f32 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    switch (EntryFormat)
+                    {
+                        case 0x01:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 3:
+                                    f32 BoneOpacity[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 BoneFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 2:
+                                    f32 CameraLens[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 CameraFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x04:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 0:
+                                    f32 U0_LocX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 1:
+                                    f32 V0_LocY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 2:
+                                    f32 U1_LocX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 3:
+                                    f32 V1_LocY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 4:
+                                    f32 U2_LocX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 5:
+                                    f32 V2_LocY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 6:
+                                    f32 U3_LocX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 7:
+                                    f32 V3_LocY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 8:
+                                    f32 U0_ScaleX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 9:
+                                    f32 V0_ScaleY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 10:
+                                    f32 U1_ScaleX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 11:
+                                    f32 V1_ScaleY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 12:
+                                    f32 BlendRate1[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 13:
+                                    f32 BlendRate2[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 14:
+                                    f32 Falloff[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 15:
+                                    f32 Glare[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 16:
+                                    f32 MaterialAlpha[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 17:
+                                    f32 OutlineID[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 18:
+                                    f32 U2_ScaleX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 19:
+                                    f32 V2_ScaleY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 20:
+                                    f32 U3_ScaleX[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 21:
+                                    f32 V3_ScaleY[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 MaterialFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x05:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 1:
+                                    f32 DirectionalLightEnergy[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 DirectionalLightFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x06:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 1:
+                                    f32 PointLightEnergy[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 3:
+                                    f32 PointLightRadius[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                case 4:
+                                    f32 PointLightCutoff[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 PointLightFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (CurveHeaders[i].CurveIndex)
+                            {
+                                case 1:
+                                    f32 AmbientEnergy[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                                default:
+                                    f32 AmbientFloat[CurveHeaders[i].FrameCount] <optimize=false>;
+                                    break;
+                            }
+                            break;
+                        case 0x09:
+                            f32 MorphValue[CurveHeaders[i].FrameCount] <optimize=false>;
+                            break;
+                        default:
+                            f32 FloatCurve[CurveHeaders[i].FrameCount] <optimize=false>;
+                            break;
+                    }
                     break;
                 case 0x0C:
                     struct TKeyframeFloat Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     break;
+                case 0x0D:
+                    struct TVectorShort Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    break;
+                case 0x0E:
+                    struct TVector3Short Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    if (CurveHeaders[i].FrameCount % 2)
+                    {
+                        FSkip(2);
+                    }
+                    break;
                 case 0x0F:
-                    s16 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    u16 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     if (CurveHeaders[i].FrameCount % 2)
                     {
                         FSkip(2);
@@ -175,6 +508,16 @@ typedef struct
                     struct TRgb Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     FSkip(CurveHeaders[i].FrameCount % 4);
                     break;
+                case 0x17:
+                    struct TVector4 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    break;
+                case 0x19:
+                    struct TKeyframeVector3Short Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    if (CurveHeaders[i].FrameCount % 2)
+                    {
+                        FSkip(2);
+                    }
+                    break;
                 case 0x1D:
                     struct TVectorShort Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     if (CurveHeaders[i].FrameCount % 4)
@@ -183,7 +526,7 @@ typedef struct
                     }
                     break;
             }
-        } Curve;
+        } Curve <read=ReadTAnmCurvePayload(this.EntryFormatForRead, this.CurveIndexForRead, this.CurveFormatForRead)>;
     }
 } TEntry <optimize=false>;
 
@@ -245,11 +588,26 @@ typedef struct
 
 typedef struct
 {
+    s16 Frame;
+    struct TVector3 Value;
+} TKeyframeVector3Short <read=ReadTKeyframeVector3Short>;
+
+typedef struct
+{
     s32 Frame;
     struct TVector4 Value;
 } TKeyframeVector4 <read=ReadTKeyframeVector4>;
 
 string ReadTKeyframeVector3(TKeyframeVector3& value)
+{
+    local string str;
+    SPrintf(str, "%d: %s",
+        value.Frame >= 100 ? value.Frame / 100 : value.Frame,
+        TVector3ToString(value.Value));
+    return str;
+}
+
+string ReadTKeyframeVector3Short(TKeyframeVector3Short& value)
 {
     local string str;
     SPrintf(str, "%d: %s",
@@ -296,12 +654,267 @@ string ReadTRgb(TRgb& value)
     return str;
 }
 
+string ReadTAnmEntryFormat(u16& value)
+{
+    local string str;
+
+    switch (value)
+    {
+        case 0x01:
+            return "Bone";
+        case 0x02:
+            return "Camera";
+        case 0x04:
+            return "Material";
+        case 0x05:
+            return "LightDirc";
+        case 0x06:
+            return "LightPoint";
+        case 0x08:
+            return "Ambient";
+        case 0x09:
+            return "Morph";
+    }
+
+    SPrintf(str, "0x%02X", value);
+    return str;
+}
+
+string ReadTAnmCurveFormat(u16& value)
+{
+    local string str;
+
+    switch (value)
+    {
+        case 0x05:
+            return "Vector3Fixed";
+        case 0x06:
+            return "Vector3Linear";
+        case 0x07:
+            return "Vector3Bezier";
+        case 0x08:
+            return "EulerXYZFixed";
+        case 0x09:
+            return "EulerInterpolate";
+        case 0x0A:
+            return "QuaternionLinear";
+        case 0x0B:
+            return "FloatFixed";
+        case 0x0C:
+            return "FloatLinear";
+        case 0x0D:
+            return "Vector2Fixed";
+        case 0x0E:
+            return "Vector2Linear";
+        case 0x0F:
+            return "OpacityI16Tbl";
+        case 0x10:
+            return "ScaleI16Tbl";
+        case 0x11:
+            return "QuaternionI16Tbl";
+        case 0x14:
+            return "ColorRgbTbl";
+        case 0x15:
+            return "Vector3Tbl";
+        case 0x16:
+            return "FloatTblNoInterp";
+        case 0x17:
+            return "QuaternionTbl";
+        case 0x18:
+            return "FloatTbl";
+        case 0x19:
+            return "Vector3I16Linear";
+        case 0x1A:
+            return "Vector3TblNoInterp";
+        case 0x1B:
+            return "QuaternionI16TblNoInterp";
+        case 0x1D:
+            return "OpacityI16TblNoInterp";
+    }
+
+    SPrintf(str, "0x%02X", value);
+    return str;
+}
+
+string ReadTCurveHeader(TCurveHeader& value)
+{
+    local string str;
+    local string curveFormat;
+    local string curveName;
+
+    curveFormat = ReadTAnmCurveFormat(value.CurveFormat);
+    curveName = ReadTAnmCurveName(
+        parentof(value).EntryFormat,
+        value.CurveIndex,
+        value.CurveFormat);
+
+    SPrintf(str, "%s: %s", curveFormat, curveName);
+    return str;
+}
+
+string ReadTAnmCurvePayload(u16 entryFormat, u16 curveIndex, u16 curveFormat)
+{
+    local string str;
+    local string formatName;
+    local string curveName;
+
+    formatName = ReadTAnmCurveFormat(curveFormat);
+    curveName = ReadTAnmCurveName(entryFormat, curveIndex, curveFormat);
+
+    SPrintf(str, "%s: %s", formatName, curveName);
+    return str;
+}
+
+string ReadTAnmCurveName(u16 entryFormat, u16 curveIndex, u16 curveFormat)
+{
+    local string str;
+    local u16 boneCurveIndex = curveIndex;
+
+    if (entryFormat == 0x01)
+    {
+        if (curveFormat == 0x08 || curveFormat == 0x09)
+        {
+            boneCurveIndex += 10;
+        }
+        else if (curveFormat == 0x0C)
+        {
+            boneCurveIndex += 30;
+        }
+
+        switch (boneCurveIndex)
+        {
+            case 0:
+                return "location";
+            case 1:
+                return "rotation_quaternion";
+            case 2:
+                return "scale";
+            case 3:
+                return "opacity";
+            case 11:
+                return "rotation_euler";
+            case 33:
+                return "opacity_keyframe";
+        }
+    }
+    else if (entryFormat == 0x02)
+    {
+        switch (curveIndex)
+        {
+            case 0:
+                return "location";
+            case 1:
+                return "rotation_quaternion";
+            case 2:
+                return "data.lens";
+        }
+    }
+    else if (entryFormat == 0x04)
+    {
+        switch (curveIndex)
+        {
+            case 0:
+                return "U0_LocX";
+            case 1:
+                return "V0_LocY";
+            case 2:
+                return "U1_LocX";
+            case 3:
+                return "V1_LocY";
+            case 4:
+                return "U2_LocX";
+            case 5:
+                return "V2_LocY";
+            case 6:
+                return "U3_LocX";
+            case 7:
+                return "V3_LocY";
+            case 8:
+                return "U0_ScaleX";
+            case 9:
+                return "V0_ScaleY";
+            case 10:
+                return "U1_ScaleX";
+            case 11:
+                return "V1_ScaleY";
+            case 12:
+                return "BlendRate1";
+            case 13:
+                return "BlendRate2";
+            case 14:
+                return "Falloff";
+            case 15:
+                return "Glare";
+            case 16:
+                return "Alpha";
+            case 17:
+                return "OutlineID";
+            case 18:
+                return "U2_ScaleX";
+            case 19:
+                return "V2_ScaleY";
+            case 20:
+                return "U3_ScaleX";
+            case 21:
+                return "V3_ScaleY";
+            case 22:
+                return "unknown";
+        }
+    }
+    else if (entryFormat == 0x05)
+    {
+        switch (curveIndex)
+        {
+            case 0:
+                return "color";
+            case 1:
+                return "energy";
+            case 2:
+                return "rotation";
+        }
+    }
+    else if (entryFormat == 0x06)
+    {
+        switch (curveIndex)
+        {
+            case 0:
+                return "color";
+            case 1:
+                return "energy";
+            case 2:
+                return "location";
+            case 3:
+                return "radius";
+            case 4:
+                return "cutoff";
+        }
+    }
+    else if (entryFormat == 0x08)
+    {
+        switch (curveIndex)
+        {
+            case 0:
+                return "color";
+            case 1:
+                return "energy";
+        }
+    }
+    else if (entryFormat == 0x09)
+    {
+        SPrintf(str, "morph[%d]", curveIndex);
+        return str;
+    }
+
+    SPrintf(str, "CurveIndex %d", curveIndex);
+    return str;
+}
+
 
 
 string ReadTClump(u32& value, TNuccAnm& NuccAnm)
 {
     local string str;
-    str = ReadTExtraMapping(parentof(parentof(parentof(parentof(this)))).ExtraMappings[value]);
+    str = ReadTChunkReference(parentof(parentof(parentof(parentof(this)))).ChunkReferences[value]);
     return str;
 
 }
@@ -309,17 +922,55 @@ string ReadTClump(u32& value, TNuccAnm& NuccAnm)
 string ReadTClumpChild(u32& value, TNuccAnm& NuccAnm)
 {
     local string str;
-    str = ReadTExtraMapping(parentof(parentof(parentof(parentof(parentof(parentof(this)))))).ExtraMappings[value]);
+    str = ReadTChunkReference(parentof(parentof(parentof(parentof(parentof(parentof(this)))))).ChunkReferences[value]);
     return str;
 
 }
 
-// To read the coord, we need to get the clump index from the clumps array, and then it's read mapping string from the extra mappings array
-string ReadTAnmCoord(s16& value, TNuccAnm& NuccAnm)
+string ReadTAnmCoordParent(TAnmCoord& value, TNuccAnm& NuccAnm)
 {
     local string str;
-    local s16 ClumpIndex = NuccAnm.Clumps.Clump[value].ClumpIndex;
-    str = ReadTExtraMapping(parentof(parentof(parentof(parentof(parentof(this))))).ExtraMappings[ClumpIndex]);
+    local s16 ClumpIndex = value.ClumpIndex;
+    local u16 CoordIndex = value.CoordIndex;
+    if (ClumpIndex == -1)
+    {
+        if (CoordIndex < NuccAnm.OtherEntryCount)
+        {
+            local u32 OtherMappingIndex = NuccAnm.OtherEntryChunkIndices[CoordIndex];
+            str = ReadTChunkReference(parentof(parentof(parentof(parentof(parentof(this))))).ChunkReferences[OtherMappingIndex]);
+            return str;
+        }
+
+        SPrintf(str, "Other Coord[%d]", CoordIndex);
+        return str;
+    }
+
+    local u32 ClumpMappingIndex = NuccAnm.Clumps.Clump[ClumpIndex].ClumpIndex;
+    str = ReadTChunkReference(parentof(parentof(parentof(parentof(parentof(this))))).ChunkReferences[ClumpMappingIndex]);
+    return str;
+}
+
+// Child coords resolve through the selected clump's bone/material mapping.
+string ReadTAnmCoord(TAnmCoord& value, TNuccAnm& NuccAnm)
+{
+    local string str;
+    local s16 ClumpIndex = value.ClumpIndex;
+    local u16 CoordIndex = value.CoordIndex;
+    if (ClumpIndex == -1)
+    {
+        if (CoordIndex < NuccAnm.OtherEntryCount)
+        {
+            local u32 OtherMappingIndex = NuccAnm.OtherEntryChunkIndices[CoordIndex];
+            str = ReadTChunkReference(parentof(parentof(parentof(parentof(parentof(this))))).ChunkReferences[OtherMappingIndex]);
+            return str;
+        }
+
+        SPrintf(str, "Other Coord[%d]", CoordIndex);
+        return str;
+    }
+
+    local u32 MappingIndex = NuccAnm.Clumps.Clump[ClumpIndex].BoneMaterialIndices.ClumpChild[CoordIndex].BoneMaterialIndex;
+    str = ReadTChunkReference(parentof(parentof(parentof(parentof(parentof(this))))).ChunkReferences[MappingIndex]);
     return str;
 }
 
@@ -333,13 +984,14 @@ string ReadTEntry(TEntry& Entry, TNuccAnm& NuccAnm)
 
     if (ClumpIndex == -1)
     {
-        return "Other Entry";
+        SPrintf(str, "%s Coord[%d]", ReadTAnmEntryFormat(Entry.EntryFormat), CoordIndex);
+        return str;
     }
 
     local u32 MappingIndex = NuccAnm.Clumps.Clump[ClumpIndex].BoneMaterialIndices.ClumpChild[CoordIndex].BoneMaterialIndex;
 
 
 
-    str = ReadTExtraMapping(parentof(parentof(parentof(parentof(this)))).ExtraMappings[MappingIndex]);
+    str = ReadTChunkReference(parentof(parentof(parentof(parentof(this)))).ChunkReferences[MappingIndex]);
     return str;
 }

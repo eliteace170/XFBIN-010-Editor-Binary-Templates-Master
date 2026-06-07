@@ -1,0 +1,52 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+
+uint FileSize;
+
+LittleEndian();
+
+short Count;
+
+struct{
+    char SoundPL[32];
+    
+    short padding1;
+    
+    float unk1;
+    
+    short unk2;
+    short unk3;
+    short unk4;
+    short unk5;
+
+    
+    float unk6;
+    float unk7;
+    
+    char AnimationXfbin[32];
+    
+    char AnimationName[32];
+    
+    char Hitbox[32];
+    
+    char UnkString[16];
+    
+    uint unk6;
+    
+    char PL_ANM_String[32];
+}Sound[Count] <read = SoundPL>;
+}
+SoundEvent <optimize = false>;

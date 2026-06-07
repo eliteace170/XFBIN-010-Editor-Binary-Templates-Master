@@ -1,0 +1,71 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct 
+
+{
+	BigEndian();
+
+	uint FileSize;
+
+	LittleEndian();
+
+	short Count;
+
+	struct{
+		char SoundPL[32];
+		int16 Pan;
+		float Volume;
+		int16 Pitch;
+		float EventType; 
+		int16 SoundDelayFrame;
+		float HighPassFilter;
+		float LowPassFilter;
+		int16 index;
+		int16 SoundCutframe;
+		int16 unk2; ///FadeParam
+		float unk3; // SecondaryEventType
+		
+	}Sound[Count]<read = SoundPL, optimize = false>;
+
+	/*
+	At the point where SoundCutframe is reached (or timer <= 0), the code checks unk3 and does something special if it’s in the range 1–4.
+
+	Otherwise, it checks unk2 (fade param or duration), and passes it into fade/stop functions.
+
+
+
+	 (when it’s 1-4, a fade out for SE occurs; 0 means a BGM stop)
+	 
+	 0: BGM Stop
+
+	1–4: SE Stop (with fade)
+
+	(Possibly other values for different stop/fade/other actions)
+	*/
+
+
+	/*
+
+	EventType(float, Enum):
+		SePlay      = 0.0
+		SeStop      = 1.0
+		BgmPlay     = 2.0
+		BgmStop     = 3.0
+		VoicePlay   = 4.0
+		VoiceStop   = 5.0
+		Deprecated1 = 6.0
+		Deprecated2 = 7.0
+		BgmStopFade = 8.0
+
+	*/
+}SoundEventStruct;

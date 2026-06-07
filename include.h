@@ -7,7 +7,6 @@ typedef char s8;
 typedef uchar u8;
 typedef int16 s16;
 typedef uint16 u16;
-typedef int16 s16;
 typedef int32 s32;
 typedef uint32 u32;
 typedef int64 s64;
@@ -133,7 +132,7 @@ typedef struct
 string TSphere3DToString( TSphere3D& value )
 {
     local char buffer[255];
-    SPrintf( buffer, "[%.6f, %.6f, %.6f] %.6f]", value.Center.X, value.Center.Y, value.Center.Z, value.Radius );
+    SPrintf( buffer, "[%.6f, %.6f, %.6f] %.6f", value.Center.X, value.Center.Y, value.Center.Z, value.Radius );
 
     return buffer;
 }
@@ -338,14 +337,12 @@ u32 StringToInt( char str[] )
 {
     local u32 result = 0;
     local u32 length = Strlen( str );
+    local u32 i;
 
     if ( length > 4 ) length = 4;
 
-    while ( length )
-    {
-        --length;
-        result += str[length] * Pow( 10, length);
-    }
+    for ( i = 0; i < length; ++i )
+        result = ( result << 8 ) | str[i];
 
     return result;
 }
@@ -483,7 +480,7 @@ void ArrayFillUInt( u32 array[], u32 count, u32 value )
         array[i] = value;
 }
 
-void ArrayMinUInt( u32 array[], u32 count )
+u32 ArrayMinUInt( u32 array[], u32 count )
 {
     local u32 i;
     local u32 min = 0xFFFFFFFF;
@@ -494,10 +491,10 @@ void ArrayMinUInt( u32 array[], u32 count )
             min = array[i];
     }
 
-    return max;
+    return min;
 }
 
-void ArrayMaxUInt( u32 array[], u32 count )
+u32 ArrayMaxUInt( u32 array[], u32 count )
 {
     local u32 i;
     local u32 max = 0;

@@ -1,0 +1,34 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Count;
+
+struct{
+uint Index;
+int ExtraHitIndex;
+int unk0;
+int EffectPrmID;
+int SoundID;
+int unk3;
+int unk4;
+int ExtraEffect;
+int unk6;
+}DamageEff[Count] <read= Index>;
+}
+damageeff_bin <optimize = false>;

@@ -1,0 +1,64 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct 
+
+{
+	BigEndian();
+
+	uint FileSize;
+
+	LittleEndian();
+
+	short Count;
+
+	struct{
+		char SoundPL[32];
+		int16 Pan;
+		float Volume;
+		int16 Pinch;
+		float EventType;
+		int16 SoundDelay; 
+		float HighPassFilter;
+		float LowPassFilter;
+		char SoundXfbin[32];
+		char AnimationName[32];
+		char Hitbox[32];
+		float Location_x;
+		float Location_y;
+		float Location_z;
+		int16 SoundDelayReset;
+		int16 unk; //FadeParam maybe
+		int16 SoundDelayResetAnm; 
+		int16 LoopFlag; 
+		char PL_ANM_String[32];
+		
+	}Sound[Count]<read = SoundPL, optimize = false>;
+
+
+
+	/*
+
+	EventType(float, Enum):
+		SePlay      = 0.0
+		SeStop      = 1.0
+		BgmPlay     = 2.0
+		BgmStop     = 3.0
+		VoicePlay   = 4.0
+		VoiceStop   = 5.0
+		Deprecated1 = 6.0
+		Deprecated2 = 7.0
+		BgmStopFade = 8.0
+
+	*/
+}BattleSoundStruct;

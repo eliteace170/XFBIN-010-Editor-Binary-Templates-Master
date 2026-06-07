@@ -1,301 +1,575 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nud.bt
-//   Authors: 
-//   Version: 1.0
-//   Purpose: Parse Bandai Namco NUD Model files
-//  Category: 
-// File Mask: 
-//  ID Bytes: 
-//   History: 
+//      File: nuccChunkModel.bt
+//   Authors: SutandoTsukai181, TheLeonX, Hydra
+//   Version: 1.1
+//   Purpose: Parse Bandai Namco/CC2 NUD model data embedded in nuccChunkModel
+//  Category:
+// File Mask:
+//  ID Bytes:
+//   History:
 //   1.0 - Initial release
+//   1.1 - Updated names/flags/layout from Blender-XFBIN-Importer br_nud.py
 //------------------------------------------------
+
+#ifndef NUD
+#define NUD
+#endif
 
 #include "/../include.h";
 BigEndian();
 
+string ReadNudVertexType(u8& value)
+{
+    local string str;
+    local u8 vertexType = value & 0x0F;
+    switch (vertexType)
+    {
+        case 0x00: return "FloatPosition";
+        case 0x01: return "FloatPosition Normal";
+        case 0x02: return "FloatPosition TangentBitangent";
+        case 0x03: return "FloatPosition Normal TangentBitangent";
+        case 0x04: return "HalfNormalPosition";
+        case 0x05: return "HalfNormalPosition TangentBitangent";
+        case 0x06: return "HalfNormalPosition Normal";
+        case 0x07: return "HalfNormalPosition Normal TangentBitangent";
+    }
+    SPrintf(str, "VertexType 0x%X", vertexType);
+    return str;
+}
 
+string ReadNudBoneType(u8& value)
+{
+    local string str;
+    local u8 boneType = value & 0xF0;
+    switch (boneType)
+    {
+        case 0x00: return "NoBones";
+        case 0x10: return "BonesFloat";
+        case 0x20: return "BonesHalfFloat";
+        case 0x40: return "BonesByte";
+    }
+    SPrintf(str, "BoneType 0x%X", boneType);
+    return str;
+}
 
+string ReadNudUvColorFlags(u8& value)
+{
+    local string str;
+    local u8 uvCount = value >> 4;
+    local u8 uvType = value & 0x0F;
+    local string typeName;
+    switch (uvType)
+    {
+        case 0x00:
+            typeName = "NoColorHalfUV";
+            break;
+        case 0x01:
+            typeName = "NoColorFloatUV";
+            break;
+        case 0x02:
+            typeName = "ByteColorHalfUV";
+            break;
+        case 0x03:
+            typeName = "ByteColorFloatUV";
+            break;
+        case 0x04:
+            typeName = "HalfColorHalfUV";
+            break;
+        case 0x05:
+            typeName = "HalfColorFloatUV";
+            break;
+        default:
+            typeName = "Unknown";
+            break;
+    }
+    SPrintf(str, "%s UVs[%d]", typeName, uvCount);
+    return str;
+}
+
+u32 GetNudUvColorSize(u8 uvColorFlags)
+{
+    local u32 size = 0;
+    local u8 uvCount = uvColorFlags >> 4;
+    local u8 uvType = uvColorFlags & 0x0F;
+
+    if (uvType & 0x02)
+    {
+        size += 4;
+    }
+    else if (uvType & 0x04)
+    {
+        size += 8;
+    }
+
+    if (uvType & 0x01)
+    {
+        size += uvCount * 8;
+    }
+    else
+    {
+        size += uvCount * 4;
+    }
+
+    return size;
+}
+
+u32 GetNudVertexMainSize(u8 vertexFlags)
+{
+    local u32 size = 12;
+    local u8 vertexType = vertexFlags & 0x0F;
+    local u8 boneType = vertexFlags & 0xF0;
+
+    if (!(vertexType & 0x04))
+    {
+        size += 4;
+        if (vertexType & 0x01)
+        {
+            size += 16;
+        }
+        if (vertexType & 0x02)
+        {
+            size += 32;
+        }
+    }
+    else
+    {
+        if (vertexType & 0x02)
+        {
+            size += 8;
+        }
+        if (vertexType & 0x01)
+        {
+            size += 16;
+        }
+    }
+
+    if (boneType == 0x10)
+    {
+        size += 32;
+    }
+    else if (boneType == 0x20)
+    {
+        size += 16;
+    }
+    else if (boneType == 0x40)
+    {
+        size += 8;
+    }
+
+    return size;
+}
 
 typedef struct
 {
-    uint ShaderID;
-    uint Unk;
-    ushort SourceFactor;
-    ushort TextureCount;
-    ushort DestinationFactor;
-    ubyte AlphaTest;
-    ubyte AlphaFunction;
-    ushort RefAlpha;
-    ushort CullMode;
-    float unk1;
-    float unk2;
-    uint ZBufferOffset;
-    
-    struct{
-            ubyte baseID <format=hex>;
-            ubyte groupID <format=hex>;
-            ubyte subgroupID <format=hex>;
-            ubyte textureID <format=hex>;
-            uint Unk1;
-            ushort Unk2;
-            ushort MapMode; // could be projection mode 
-            ubyte WrapModeS; //Extension mode X?
-            ubyte WrapModeT; //Extension mode Y?
-            ubyte MinFilter;
-            ubyte MagFilter;
-            ubyte MipDetail;
-            ubyte Unk2;
-            uint Unk3;
-            ushort Unk4;
-        }Textures[TextureCount];
-    
-    local int m = -1;
-    while (m == -1)
+    u8 BaseID <format=hex>;
+    u8 GroupID <format=hex>;
+    u8 SubGroupID <format=hex>;
+    u8 TextureID <format=hex>;
+
+    u32 Field04;
+    u16 Field08;
+    u16 MapMode;
+    u8 WrapModeS;
+    u8 WrapModeT;
+    u8 MinFilter;
+    u8 MagFilter;
+    u8 MipDetail;
+    u8 Field11;
+    u32 Field12;
+    u16 LOD;
+} TNudMaterialTexture <optimize=false>;
+
+typedef struct(u64 materialEnd)
+{
+    local u64 entryStart = FTell();
+
+    u32 MatAttSize;
+    u32 NameStart;
+    u8 Field08[3];
+    u8 ValueCount;
+    u32 Field0C;
+
+    if (ValueCount)
     {
-    struct{
-            uint MatAttSize;
-            uint NameStart;
-            uint PropValuesCount;
-            uint Unk4;
-            float PropValues[PropValuesCount];
-        }MaterialProperties;
-        
-        if (MaterialProperties.MatAttSize == 0)
-        {
-            m = 0;
-        }
-        if (MaterialProperties.PropValuesCount == 0)
-        {FSkip(4);}
+        f32 Values[ValueCount];
     }
-}SMaterial;
 
-
-typedef struct{
-
-    char Magic[4];
-    uint NUDSize;
-    ushort Version;
-    ushort MeshGroupCount;
-    short BoneRange[2];
-    uint PolyClumpStart;
-    uint PolyClumpSize;
-    
-    local uint VertClumpStart = PolyClumpStart + PolyClumpSize;
-    uint VertClumpSize;
-
-    local uint VertAddClumpStart = VertClumpStart + VertClumpSize;
-    uint VertAddClumpSize;
-    
-    local uint NameStart = VertAddClumpStart + VertAddClumpSize;
-    
-    float ModelBoundingSphere[4];
-    
-    struct{
-        float BoundingSphere[8];
-        uint NameStart;
-        ushort Unk1;
-        ushort BoneFlags;
-        ushort SingleBind;
-        ushort MeshCount;
-        uint PositionB;
-        
-    }MeshGroups;
-    
-    struct{
-        uint PolyClumpStart;
-        uint VertClumpStart;
-        uint VertAddClumpStart;
-        ushort VertexCount;
-        ubyte VertexSize;
-        ubyte UVSize;
-        struct{
-            uint MaterialOffset1;
-            uint MaterialOffset2;
-            uint MaterialOffset3;
-            uint MaterialOffset4;
-        }MaterialOffsets;
-        
-        ushort FaceCount;
-        ubyte FaceSize;
-        ubyte FaceFlag;
-        FSkip(0xC);
-
-    }MeshHeader[MeshGroups.MeshCount];
-    
-    local int i;
-    struct{
-        for (i = 0; i< MeshGroups.MeshCount; i++)
-        {
-            if (MeshHeader[i].MaterialOffsets.MaterialOffset1 > 0)
-            {
-                struct SMaterial Material1<optimize=false>;
-                //FSkip(4);
-            }
-            if (MeshHeader[i].MaterialOffsets.MaterialOffset2 > 0)
-            {
-                struct SMaterial Material2<optimize=false>;
-                //FSkip(4);
-            }
-            if (MeshHeader[i].MaterialOffsets.MaterialOffset3 > 0)
-            {
-                struct SMaterial Material3<optimize=false>;
-                //FSkip(4);
-            }
-            if (MeshHeader[i].MaterialOffsets.MaterialOffset4 > 0)
-            {
-                struct SMaterial Material4<optimize=false>;
-                //FSkip(4);
-            }
-        }
-    }MeshMaterials;
-    
-    local int t;
-    struct{
-        for (t = 0; t< MeshGroups.MeshCount; t++)
-        {
-            struct{
-                short triangles[MeshHeader[t].FaceCount+3];
-            }MeshTriangles;
-        }
-    }Triangles;
-    if (sizeof(Triangles) % 0x4 != 0)
+    local u64 propertyEnd = entryStart + MatAttSize;
+    if (materialEnd != 0 && propertyEnd > materialEnd)
     {
-        FSkip(sizeof(Triangles) % 0x4);
+        propertyEnd = materialEnd;
     }
-    
-    local int BoneType;
-    local int VertexType;
-    local int c;
-    local int UVCount;
-    local int UVType;
-    local int UVSize;
-    local int v;
+    local u32 PaddingSize = 0;
+    if (MatAttSize > 0 && FTell() < propertyEnd)
+    {
+        PaddingSize = propertyEnd - FTell();
+        if (PaddingSize <= MatAttSize)
+        {
+            FSkip(PaddingSize);
+        }
+        else
+        {
+            FSeek(propertyEnd);
+        }
+    }
+} TNudMaterialProperty <optimize=false>;
+
+string ReadNudMaterialProperty(TNudMaterialProperty& value)
+{
+    local string str;
+    if (value.MatAttSize == 0)
+    {
+        return "End";
+    }
+    SPrintf(str, "NameStart[0x%X] Values[%d]", value.NameStart, value.ValueCount);
+    return str;
+}
+
+typedef struct(u64 materialEnd)
+{
+    local u64 materialStart = startof(this);
+    local int textureIndex;
+
+    u32 Flags;
+    u32 Field04;
+
+    u16 SourceFactor;
+    u16 TextureCount;
+    u16 DestinationFactor;
+
+    u8 AlphaTest;
+    u8 AlphaFunction;
+    u16 RefAlpha;
+    u16 CullMode;
+
+    f32 Field14; // Always 0 in most files.
+    f32 Field18; // Usually 0, sometimes 1.
+    s32 ZBufferOffset;
+
+    while (textureIndex < TextureCount && FTell() + 24 <= materialEnd)
+    {
+        struct TNudMaterialTexture Texture <optimize=false>;
+        textureIndex++;
+    }
+    local u32 materialRelativeOffset = FTell() - materialStart;
+    FSeek(materialStart + Align(materialRelativeOffset, 8));
+
+    local int propIndex = 0;
+    local int finished = 0;
+    while (!finished && FTell() + 16 <= materialEnd)
+    {
+        struct TNudMaterialProperty Property(materialEnd) <read=ReadNudMaterialProperty>;
+        if (Property.MatAttSize == 0)
+        {
+            finished = 1;
+        }
+        propIndex++;
+    }
+} TNudMaterial <optimize=false>;
+
+typedef struct
+{
+    u32 PolyClumpStart;
+    u32 VertClumpStart;
+    u32 VertAddClumpStart;
+
+    u16 VertexCount;
+    u8 VertexFlags <read=ReadNudVertexType>;
+    u8 UvColorFlags <read=ReadNudUvColorFlags>;
+
+    u32 MaterialOffsets[4];
+
+    u16 FaceCount;
+    u8 FaceSize;
+    u8 FaceFlag;
+    u32 Padding[3] <hidden=true>;
+} TNudMeshHeader <optimize=false, read=ReadNudMeshHeader>;
+
+string ReadNudMeshHeader(TNudMeshHeader& value)
+{
+    local string str;
+    SPrintf(str, "Verts[%d] Faces[%d] %s %s",
+        value.VertexCount,
+        value.FaceCount,
+        ReadNudVertexType(value.VertexFlags),
+        ReadNudBoneType(value.VertexFlags));
+    return str;
+}
+
+typedef struct
+{
+    struct TVector4 BoundingSphere;
+    f32 UnknownValues[4];
+    u32 NameStart;
+    u16 Field24;
+    u16 BoneFlags;
+    s16 SingleBind;
+    u16 MeshCount;
+    u32 MeshHeaderStart;
+
+    FPush();
+    FSeek(startof(parentof(parentof(this))) + MeshHeaderStart);
+    struct TNudMeshHeader Meshes[MeshCount] <optimize=false>;
+    FPop();
+} TNudMeshGroup <optimize=false>;
+
+typedef struct(u8 uvColorFlags)
+{
+    local u8 uvCount = uvColorFlags >> 4;
+    local u8 uvType = uvColorFlags & 0x0F;
     local int u;
-    for (c = 0; c< MeshGroups.MeshCount; c++)
+
+    if (uvType & 0x02)
     {
-        BoneType = MeshHeader[c].VertexSize & 0xF0;
-        
-        if (BoneType > 0)
+        u8 Color[4];
+    }
+    else if (uvType & 0x04)
+    {
+        f16 Color[4];
+    }
+
+    for (u = 0; u < uvCount; u++)
+    {
+        if (uvType & 0x01)
         {
-            UVCount = MeshHeader[c].UVSize >> 4;
-            UVType = MeshHeader[c].UVSize & 0x0F;
-            
-            struct{
-                for (v = 0; v < MeshHeader[c].VertexCount; v++)
-                {
-                    if (UVType == 2)
-                    {
-                        struct{
-                            ubyte R;
-                            ubyte G;
-                            ubyte B;
-                            ubyte A;
-                        }VertexColor;
-                    }
-                    else if (UVType == 4)
-                    {
-                        struct{
-                            hfloat R;
-                            hfloat G;
-                            hfloat B;
-                            hfloat A;
-                        }VertexColor;
-                    }
-                    for (u = 0; u < UVCount; u++)
-                    {
-                        struct{
-                            hfloat U;
-                            hfloat V;
-                        }UV;
-                    }
-                }
-            }Vertex_UV_Color;
+            struct TVector2 UVFloat;
+        }
+        else
+        {
+            struct TVector2Half UVHalf;
         }
     }
-    for (c = 0; c< MeshGroups.MeshCount; c++)
-    {
-        BoneType = MeshHeader[c].VertexSize & 0xF0;
-        VertexType = MeshHeader[c].VertexSize & 0x0F;
-        UVSize = MeshHeader[c].UVSize;
-        
-        for (v = 0; v < MeshHeader[c].VertexCount; v++)
-        {
-            struct{
-                float Position[3];
-                
-                if (VertexType == 0)
-                {
-                    FSkip(4);
-                }
-                else if (VertexType == 1)
-                {
-                    float Normal[3];
-                    FSkip(4);
-                }
-                else if (VertexType == 2)
-                {
-                    float Normal[3];
-                    FSkip(40);
-                }
-                else if (VertexType == 3)
-                {
-                    FSkip(4);
-                    float Normal[3];
-                    FSkip(4);
-                    float BiTangents[4];
-                    float Tangents[4];
-                }
-                else if (VertexType == 6)
-                {
-                    hfloat Normal[3];
-                    FSkip(2);
+} TNudUvColor <optimize=false>;
 
-                }
-                else if (VertexType == 7)
-                {
-                    hfloat Normal[3];
-                    FSkip(2);
-                    hfloat BiTangents[4];
-                    hfloat Tangents[4];
-                }
-                
-                if (BoneType == 0) //Rigid mesh
-                {
-                    if (UVSize >= 18)
-                    {
-                        struct{
-                            byte R;
-                            byte G;
-                            byte B;
-                            byte A;
-                        }Color;
-                    }
-                    for (u = 0; u < UVSize >> 4; u++)
-                    {
-                        struct{
-                            hfloat U;
-                            hfloat V;
-                        }UV;
-                    }
-                }
-                else if (BoneType == 0x10)
-                {
-                    int BoneID[4];
-                    float BoneWeights[4];
-                }
-                else if (BoneType == 0x20)
-                {
-                    short BoneID[4];
-                    hfloat BoneWeights[4];
-                }
-                else if (BoneType == 0x40)
-                {
-                    byte BoneID[4];
-                    ubyte BoneWeights[4];
-                }
-            }Vertex;
-        }        
+typedef struct(u8 vertexFlags)
+{
+    local u8 vertexType = vertexFlags & 0x0F;
+    local u8 boneType = vertexFlags & 0xF0;
+
+    struct TVector3 Position;
+
+    if (!(vertexType & 0x04))
+    {
+        f32 PositionW;
+
+        if (vertexType & 0x01)
+        {
+            struct TVector3 Normal;
+            f32 NormalW;
+        }
+
+        if (vertexType & 0x02)
+        {
+            struct TVector4 Bitangent;
+            struct TVector4 Tangent;
+        }
     }
-}sNud;
+    else
+    {
+        if (vertexType & 0x02)
+        {
+            f16 Normal[3];
+            f16 NormalW;
+        }
+
+        if (vertexType & 0x01)
+        {
+            f16 Bitangent[4];
+            f16 Tangent[4];
+        }
+    }
+
+    if (boneType == 0x10)
+    {
+        u32 BoneID[4];
+        f32 BoneWeight[4];
+    }
+    else if (boneType == 0x20)
+    {
+        u16 BoneID[4];
+        f16 BoneWeight[4];
+    }
+    else if (boneType == 0x40)
+    {
+        u8 BoneID[4];
+        u8 BoneWeight[4];
+    }
+} TNudVertexMain <optimize=false>;
+
+typedef struct(u16 faceCount, u64 faceEnd)
+{
+    local int faceIndex;
+    for (faceIndex = 0; faceIndex < faceCount && FTell() + 2 <= faceEnd; faceIndex++)
+    {
+        u16 Index;
+    }
+} TNudFaceBuffer <optimize=false>;
+
+typedef struct
+{
+    local u64 nudStart = startof(this);
+    local int g;
+    local int m;
+    local int v;
+    local int materialSlot;
+    local int materialEndSlot;
+    local u32 materialOffset;
+    local u32 materialEndOffset;
+    local u32 uvColorSize;
+    local u32 vertexMainSize;
+    local u64 faceBufferEnd;
+    local u64 vertexBufferEnd;
+
+    char Magic[4]; Assert(Magic == "NDP3");
+    u32 FileSize;
+    u16 Version;
+    u16 MeshGroupCount;
+
+    // Bone indices in the clump coord array.
+    u16 BoneStart;
+    u16 BoneEnd;
+
+    u32 PolyClumpStartRaw;
+    u32 PolyClumpSize;
+    local u32 PolyClumpStart = PolyClumpStartRaw + 0x30;
+
+    u32 VertClumpSize;
+    local u32 VertClumpStart = PolyClumpStart + PolyClumpSize;
+
+    u32 VertAddClumpSize;
+    local u32 VertAddClumpStart = VertClumpStart + VertClumpSize;
+
+    local u32 NameStart = VertAddClumpStart + VertAddClumpSize;
+
+    struct TVector4 BoundingSphere;
+
+    struct TNudMeshGroup MeshGroups[MeshGroupCount] <optimize=false>;
+
+    FPush();
+    {
+        struct
+        {
+            for (g = 0; g < MeshGroupCount; g++)
+            {
+                struct
+                {
+                    for (m = 0; m < MeshGroups[g].MeshCount; m++)
+                    {
+                        struct
+                        {
+                            for (materialSlot = 0; materialSlot < 4; materialSlot++)
+                            {
+                                materialOffset = MeshGroups[g].Meshes[m].MaterialOffsets[materialSlot];
+                                if (materialOffset != 0 && PolyClumpStart >= 28 && materialOffset <= PolyClumpStart - 28)
+                                {
+                                    materialEndOffset = PolyClumpStart;
+                                    for (materialEndSlot = 0; materialEndSlot < 4; materialEndSlot++)
+                                    {
+                                        if (MeshGroups[g].Meshes[m].MaterialOffsets[materialEndSlot] > materialOffset &&
+                                            MeshGroups[g].Meshes[m].MaterialOffsets[materialEndSlot] < materialEndOffset)
+                                        {
+                                            materialEndOffset = MeshGroups[g].Meshes[m].MaterialOffsets[materialEndSlot];
+                                        }
+                                    }
+
+                                    FSeek(nudStart + materialOffset);
+                                    struct TNudMaterial Material(nudStart + materialEndOffset) <optimize=false>;
+                                }
+                            }
+                        } Materials;
+                    }
+                } MeshGroup;
+            }
+        } MaterialBuffers;
+    }
+    FPop();
+
+    FPush();
+    {
+        struct
+        {
+            for (g = 0; g < MeshGroupCount; g++)
+            {
+                struct
+                {
+                    for (m = 0; m < MeshGroups[g].MeshCount; m++)
+                    {
+                        if (MeshGroups[g].Meshes[m].PolyClumpStart < PolyClumpSize)
+                        {
+                            FSeek(nudStart + PolyClumpStart + MeshGroups[g].Meshes[m].PolyClumpStart);
+                            faceBufferEnd = nudStart + PolyClumpStart + PolyClumpSize;
+                            struct TNudFaceBuffer Faces(MeshGroups[g].Meshes[m].FaceCount, faceBufferEnd);
+                        }
+                    }
+                } MeshGroup;
+            }
+        } FaceBuffers;
+    }
+    FPop();
+
+    FPush();
+    {
+        struct
+        {
+            for (g = 0; g < MeshGroupCount; g++)
+            {
+                struct
+                {
+                    for (m = 0; m < MeshGroups[g].MeshCount; m++)
+                    {
+                        if ((MeshGroups[g].Meshes[m].VertexFlags & 0xF0) != 0)
+                        {
+                            uvColorSize = GetNudUvColorSize(MeshGroups[g].Meshes[m].UvColorFlags);
+                            vertexMainSize = GetNudVertexMainSize(MeshGroups[g].Meshes[m].VertexFlags);
+
+                            FSeek(nudStart + VertClumpStart + MeshGroups[g].Meshes[m].VertClumpStart);
+                            vertexBufferEnd = nudStart + VertClumpStart + VertClumpSize;
+                            struct
+                            {
+                                for (v = 0; v < MeshGroups[g].Meshes[m].VertexCount && FTell() + uvColorSize <= vertexBufferEnd; v++)
+                                {
+                                    struct TNudUvColor UvColor(MeshGroups[g].Meshes[m].UvColorFlags);
+                                }
+                            } UvColorBuffer;
+
+                            FSeek(nudStart + VertAddClumpStart + MeshGroups[g].Meshes[m].VertAddClumpStart);
+                            vertexBufferEnd = nudStart + VertAddClumpStart + VertAddClumpSize;
+                            struct
+                            {
+                                for (v = 0; v < MeshGroups[g].Meshes[m].VertexCount && FTell() + vertexMainSize <= vertexBufferEnd; v++)
+                                {
+                                    struct TNudVertexMain Vertex(MeshGroups[g].Meshes[m].VertexFlags);
+                                }
+                            } VertexBuffer;
+                        }
+                        else
+                        {
+                            uvColorSize = GetNudUvColorSize(MeshGroups[g].Meshes[m].UvColorFlags);
+                            vertexMainSize = GetNudVertexMainSize(MeshGroups[g].Meshes[m].VertexFlags);
+
+                            FSeek(nudStart + VertClumpStart + MeshGroups[g].Meshes[m].VertClumpStart);
+                            vertexBufferEnd = nudStart + VertClumpStart + VertClumpSize;
+                            struct
+                            {
+                                for (v = 0; v < MeshGroups[g].Meshes[m].VertexCount && FTell() + vertexMainSize + uvColorSize <= vertexBufferEnd; v++)
+                                {
+                                    struct TNudVertexMain Vertex(MeshGroups[g].Meshes[m].VertexFlags);
+                                    struct TNudUvColor UvColor(MeshGroups[g].Meshes[m].UvColorFlags);
+                                }
+                            } VertexBuffer;
+                        }
+                    }
+                } MeshGroup;
+            }
+        } VertexBuffers;
+    }
+    FPop();
+
+    FSeek(nudStart + FileSize);
+} TNud <optimize=false>;
+
+#ifndef XFBIN
+    struct TNud Nud;
+#endif

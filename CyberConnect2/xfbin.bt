@@ -23,7 +23,7 @@ local u32 chunkTableChunkTypeColor = SetRandomBackColor();
 local u32 chunkTableFileColor = SetRandomBackColor();
 local u32 chunkTableChunkColor = SetRandomBackColor();
 local u32 chunkMapColor = SetRandomBackColor();
-local u32 extraIndicesColor = SetRandomBackColor();
+local u32 chunkReferencesColor = SetRandomBackColor();
 local u32 chunkMapIndicesColor = SetRandomBackColor();
 local u32 chunkColor = SetRandomBackColor();
 
@@ -40,21 +40,22 @@ typedef struct
     u32 Padding[2] <hidden=true>;
     Assert( Padding[0] == 0 && Padding[1] == 0 );
 
-    u32 ChunkTableSize; // Without ExtraIndices size
-    u32 MinPageSize; // Unsure how to describe it: it's either 3 or 3 + NuccPage.ExtraIndicesSize
+    u32 ChunkTableSize; // Without chunk references size
+    u32 MinPageSize;
     u16 FileId1; // == FileId
     u16 Field1A;
 
     struct TChunkTable ChunkTable;
 
-    local u32 currentPageStart, currentExtraIndicesStart = 0;
+    local u32 currentPageStart = 0;
+    local u32 currentReferenceStart = 0;
     struct
     {
         while ( !FEof() )
         {
-            struct TPage Page( currentPageStart, currentExtraIndicesStart );
+            struct TPage Page( currentPageStart, currentReferenceStart );
             currentPageStart += Page.pageSize;
-            currentExtraIndicesStart += Page.extraIndicesSize;
+            currentReferenceStart += Page.referenceSize;
         }
     } Pages;
 
@@ -77,7 +78,7 @@ typedef struct
     u32 ChunkMapSize;
 
     u32 ChunkMapIndicesCount; // Size is always count * 4
-    u32 ExtraIndicesCount; // Size is always count * 2 * 4
+    u32 ChunkReferenceCount; // Size is always count * 2 * 4
 
     SetBackColor( chunkTableChunkTypeColor );
     struct { struct TString ChunkTypes[ChunkTypeCount]; } ChunkTypes;
@@ -101,8 +102,8 @@ typedef struct
     SetBackColor( chunkMapColor );
     struct TChunkMap ChunkMaps[ChunkMapCount];
 
-    SetBackColor( extraIndicesColor );
-    struct TExtraMapping ExtraMappings[ExtraIndicesCount];
+    SetBackColor( chunkReferencesColor );
+    struct TChunkReference ChunkReferences[ChunkReferenceCount];
 
     SetBackColor( chunkMapIndicesColor );
     u32 ChunkMapIndices[ChunkMapIndicesCount];
@@ -125,9 +126,9 @@ typedef struct
 {
     u32 ChunkNameIndex;
     u32 ChunkMapIndex;
-} TExtraMapping <read=ReadTExtraMapping>;
+} TChunkReference <read=ReadTChunkReference>;
 
-typedef struct( u32 currentPageStart, u32 currentExtraIndicesStart )
+typedef struct( u32 currentPageStart, u32 currentReferenceStart )
 {
     local u32 chunkCount = 0;
     local u32 pageStart = currentPageStart;
@@ -140,15 +141,15 @@ typedef struct( u32 currentPageStart, u32 currentExtraIndicesStart )
     } while ( ReadChunkTypeIndex( Chunk.ChunkMap.ChunkTypeIndex ) != "nuccChunkPage" );
 
     local u32 pageSize = Chunk.NuccPage.PageSize;
-    local u32 extraIndicesSize = Chunk.NuccPage.ExtraIndicesSize;
+    local u32 referenceSize = Chunk.NuccPage.ReferenceSize;
 
-    if ( extraIndicesSize )
+    if ( referenceSize )
     {
         FPush();
         {
-            SetBackColor( extraIndicesColor );
-            FSeekRel(startof(Xfbin.ChunkTable.ExtraMappings[currentExtraIndicesStart]));
-            struct TExtraMapping ExtraMappings[extraIndicesSize];
+            SetBackColor( chunkReferencesColor );
+            FSeekRel(startof(Xfbin.ChunkTable.ChunkReferences[currentReferenceStart]));
+            struct TChunkReference ChunkReferences[referenceSize];
         }
         FPop();
     }
@@ -189,6 +190,10 @@ typedef struct
         case "nuccChunkTexture":
             struct TNuccTexture NuccTexture;
             break;
+        case "nuccChunkFont":
+            struct TnuccFont NuccFont;
+            u8 Data[Size - (exists(NuccFont) ? sizeof(NuccFont) : 0)];
+            break;
         case "nuccChunkDynamics":
             struct TNuccDynamics NuccDynamics;
             break;
@@ -203,6 +208,10 @@ typedef struct
             break;
         case "nuccChunkModelHit":
             struct TNuccModelHit NuccModelHit;
+            break;
+        case "nuccChunkBillboard":
+            struct TNuccBillboard NuccBillboard;
+            u8 Data[Size - (exists(NuccBillboard) ? sizeof(NuccBillboard) : 0)];
             break;
         case "nuccChunkAnmStrm":
             struct TNuccAnmStrm NuccAnmStrm;
@@ -232,26 +241,22 @@ typedef struct
             struct TNuccModelPrimitiveBatch NuccModelPrimitiveBatch;
             u8 Data[Size - (exists(NuccModelPrimitiveBatch) ? sizeof(NuccModelPrimitiveBatch) : 0)];
             break;
-        /*case "nuccChunkModel":
-            u16 Unk1; //Increasing this value requires you to add 2 more bytes in the header
-              //I currently have no idea where to add these 2 bytes
-            u16 MaterialFlags;
-        
-            u16 Attributes;
-            u8 RenderLayer;
-            u8 LightModeID;
-            u32 LightCategoryFlag;
-        
-            u32 ClumpID;
-            u32 HitID;
-            s32 MeshBoneID;
-            u32 NUDSize;
-            if (Attributes & 0x4)
-            {f32 BoundingBox[6];}
-            struct sNud NuccModel;
-            u16 MaterialCount;
-            u32 MaterialIDs[MaterialCount];
-            break;*/
+        case "nuccChunkModel":
+            struct TNuccModel NuccModel;
+            u8 Data[Size - (exists(NuccModel) ? sizeof(NuccModel) : 0)];
+            break;
+        case "nuccChunkMorphModel":
+            struct TNuccMorphModel NuccMorphModel;
+            u8 Data[Size - (exists(NuccMorphModel) ? sizeof(NuccMorphModel) : 0)];
+            break;
+        case "nuccChunkModelVertex":
+            struct TNuccModelVertex NuccModelVertex;
+            u8 Data[Size - (exists(NuccModelVertex) ? sizeof(NuccModelVertex) : 0)];
+            break;
+        case "nuccChunkNub":
+            struct TNuccNub NuccNub;
+            u8 Data[Size - (exists(NuccNub) ? sizeof(NuccNub) : 0)];
+            break;
         case "nuccChunkBinary":
             { 
                 struct nuccChunkBinary BinaryStructure;
@@ -311,7 +316,7 @@ string ReadTChunkMap( struct TChunkMap& value )
     return str;
 }
 
-string ReadTExtraMapping( struct TExtraMapping& value )
+string ReadTChunkReference( struct TChunkReference& value )
 {
     local string str = "";
     local string name = ReadChunkNameIndex( value.ChunkNameIndex );

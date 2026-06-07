@@ -1,0 +1,59 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+local int Pos;
+struct{
+uint64 Offset0 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset0);
+string string0;
+FSeek(Pos);
+
+uint64 Index;
+
+
+uint64 Offset1 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset1);
+string string1;
+FSeek(Pos);
+
+
+uint64 unk;
+
+uint64 Offset3 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset3);
+string string3;
+FSeek(Pos);
+
+uint64 Offset4 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset4);
+string string4;
+FSeek(Pos);
+
+uint Cost;
+uint UnlockCondition;
+}Chat[Count]<optimize= false, read= string0>;
+}
+specialChatParam <optimize = false>;

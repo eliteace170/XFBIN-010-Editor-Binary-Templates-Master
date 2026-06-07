@@ -1,0 +1,86 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Binary Template
+//
+//      File:ItemInfo.xfbin 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+BigEndian();
+int32 Filesize2; // binary file total size minus first 4 bytes
+LittleEndian();
+int32 typeTypeVersion;
+int32 entryCount; // total entries in the structure
+int32 padding;
+int padding2;
+local int Pos;
+
+struct
+{
+    uint64 ItemIdOffset;
+    Pos = FTell();
+    FSeek(Pos + ItemIdOffset - 8);
+    string BattleItemName;
+    FSeek(Pos);
+    
+    int32 unk1;
+    int32 Itempadding;
+    
+    local int i;
+    for (i = 0; i < 3; i++)
+    {
+        struct
+        {
+            uint64 ItemIconOffset;
+            Pos = FTell();
+            FSeek(Pos + ItemIconOffset - 8);
+            string BattleIconName;
+            FSeek(Pos);
+        }BattleIconNames <read = BattleIconName>;
+            
+    }
+    int32 unk2;
+    int32 unk3;
+    int32 unk4;
+    int32 unk5;
+    int32 unk6;
+    int32 unk7;
+    
+    uint64 ItemNameOffset;
+    Pos = FTell();
+    FSeek(Pos + ItemNameOffset - 8);
+    string ItemNameComment;//comment might be in jappanese;
+    FSeek(Pos);
+    int32 unk9;
+    int32 unk10;
+    int32 unk11;
+    int32 unk12;
+    
+    uint64 ConditionPrm_IdOffset;
+    Pos = FTell();
+    FSeek(Pos + ConditionPrm_IdOffset - 8);
+    string ConditionPrmName;
+    FSeek(Pos);
+    int32 unk13;
+    int32 unk14;
+    int32 unk15;
+    int32 unk16;
+    int32 unk17;
+    int32 unk18;
+    
+    
+    
+    
+    
+}ItemInfoEntries[entryCount] <read = BattleItemName, optimize = false>;
+
+
+}
+iteminfo <optimize = false>;

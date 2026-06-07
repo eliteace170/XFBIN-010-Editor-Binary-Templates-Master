@@ -1,0 +1,537 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkAnm.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.0 - Initial release
+//------------------------------------------------
+
+#include "/../include.h";
+enum ChannelList {
+    Mono      = 1,
+    Stereo        = 2
+};
+string GetChannelType(uint ChannelID)
+{
+    // Create an enum variable and assign the given value.
+    enum ChannelList dt;
+    dt = (enum ChannelList) ChannelID;
+    
+    // Convert the enum value to its string representation.
+    local string channel_type;
+    channel_type = EnumToString(dt);
+    if (channel_type == "")
+        channel_type = "UNKNOWN";
+    
+    return channel_type;
+}
+local u32 PACK_OFFSET;
+typedef struct
+{
+    u32 FileSize;
+    char   format[4]<hidden=true>;
+
+    if (format[0] == 0x4E
+     && format[1] == 0x55
+      && format[2] == 0x53
+      && format[3] == 0x33) //NUS3
+      {
+        
+        LittleEndian();
+        FSeek( FTell() - 4 );
+        struct TNuccNUS3 NUS3BANK;
+      }
+    else if (format[0] == 0x1
+     && format[1] == 0x2
+      && format[2] == 0x1
+      && format[3] == 0x0) //1210 old NUB
+      {
+         
+        LittleEndian();
+        FSeek( FTell() - 4 ); 
+        struct TNuccNubOld NUB;
+        u8 Data[FileSize - (exists(NUB) ? sizeof(NUB) : 0)];
+      }
+      else if (format[0] == 0x40
+     && format[1] == 0x55
+      && format[2] == 0x54
+      && format[3] == 0x46) //ACB File
+      {
+         
+        FSeek( FTell() - 4 ); 
+        struct TNuccACB ACB;
+        u8 Data[FileSize - (exists(ACB) ? sizeof(ACB) : 0)];
+      }
+      
+    BigEndian();
+} TNuccNub;
+
+typedef struct
+{
+    // starts at the 'N' of "NUS3" (caller seeks back so this struct begins on the FourCC)
+    char    format[4];          // "NUS3" (or other FourCC variants)
+
+    // header dwords that appear after format in many NUS3BANKs
+    u32     NUS3BANK_SIZE;               // a2[1] in IDA (used by some code)
+    char     BANKTOC[8];               // should be 'KNAB' (a2[2])
+    u32     BANKTOC_SIZE;    // a2[4] - offset (relative to file start) to data blocks / payload table base
+    u32     entryCount;         // a2[5] - number of entries in directory
+
+    // compute base file offset for this NUS3 block
+    local u64 baseOffset = FTell() - 8 - 0x10; // we've read 8 bytes (format + size), so step back to start
+
+    // read directory entries (they live just after the first 6 dwords of header)
+    FPush();
+    // directory in file usually begins immediately after the six u32s: that's baseOffset + 6*4
+    FSeek( baseOffset + (6 * 4) );
+    typedef struct
+    {
+        u32 Type;    // FourCC
+        u32 Size;    // size (used by parser loop)
+    } TDirEntry;
+    TDirEntry DataTypes[ entryCount ];
+    FPop();
+    // ---------- PRE-SCAN: вычисляем PACK (KCAP) абсолютный offset ДО парсинга блоков ----------
+    local u64 pack_ptr;      // абсолютный файл-офсет начала KCAP-блока (или 0 если не найден)
+    local u64 tmpPtr;        // временный указатель для перебора
+    local u32 ii;            // индекс перебора
+    pack_ptr = 0;
+    tmpPtr = baseOffset + BANKTOC_SIZE + 20; // где начинаются блоки
+    
+    for ( ii = 0; ii < entryCount; ++ii )
+    {
+        if ( DataTypes[ii].Type == FourCC("KCAP") )
+        {
+            pack_ptr = tmpPtr;
+            break;
+        }
+        // advance by (size + 8) — как в основном цикле
+        tmpPtr += (u64)DataTypes[ii].Size + 8;
+    }
+
+    // положим найденное значение в глобальную переменную (однократно, до основного цикла)
+    // PACK_OFFSET объявлен вверху файла: local u32 PACK_OFFSET;
+    if ( pack_ptr )
+        PACK_OFFSET = (u32)pack_ptr;
+    else
+        PACK_OFFSET = 0;
+    
+    struct{
+        // data blocks usually begin at (dataTableOffset + 20) according to IDA observations
+    // (we keep the same computation to match parsing behavior)
+    local u64 dataPtr = baseOffset + BANKTOC_SIZE + 20;
+    local u32 i;
+    local u32 blockSize;
+    local u32 fourcc;
+    for ( i = 0; i < entryCount; ++i )
+    {
+        // guard: if size zero, create empty placeholder
+        blockSize = DataTypes[i].Size + 8;
+        // name the block by its FourCC when possible
+        fourcc = DataTypes[i].Type;
+
+        // seek to the block start
+        FPush();
+        FSeek( dataPtr );
+
+        // parse known blocks (as seen in IDA): ' PRG','ENOT','FNIB','KCAP','KRAM','NOTD','PORP'
+        if ( fourcc == FourCC(" PRG") )
+        {
+            // program / PRG block
+            //u8 GRP_Data[ blockSize ];
+            
+            struct TDataGRP GRP_DATA;
+        }
+        
+        else if ( fourcc == FourCC("PORP") )
+        {
+            u8 PROP_Data[ blockSize ];
+        }
+        else if ( fourcc == FourCC("ENOT") )
+        {
+            //u8 TONE_Data[ blockSize ];
+            struct TDataTONE TONE_DATA;
+        }
+        else if ( fourcc == FourCC("FNIB") )
+        {
+            // FNIB contains sub-structures; keep raw here
+            //u8 BNIF_Data[ blockSize ];
+            
+            struct TDataBINF BINF_DATA;
+        }
+        else if ( fourcc == FourCC("KCAP") )
+        {
+            PACK_OFFSET = FTell();
+            // KCAP - pointer/offset table expected; store as raw pointer-list
+            u8 PACK_Data[ blockSize ];
+        }
+        else if ( fourcc == FourCC("KRAM") )
+        {
+            u8 MARK_Data[ blockSize ];
+        }
+        else if ( fourcc == FourCC("NOTD") )
+        {
+            //u8 DTON_Data[ blockSize ];
+            
+            
+            struct TDataTONE DTON_DATA;
+        }
+        else if ( fourcc == FourCC("KNUJ") )
+        {
+            u8 JUNK_Data[ blockSize ];
+        }
+
+
+        FPop();
+
+        // advance pointer: IDA increments by (size + 8) between blocks
+        // keep same advancement to match common NUS3BANK layouts
+        dataPtr += (u64)blockSize;
+
+        // align to 8 bytes boundary (safety)
+        FAlign( 8 );
+    }
+    }Entries;
+    // теперь вычислим точно, сколько байт осталось внутри NUS3-блока
+    local u64 consumed = FTell() - baseOffset - 8;
+    local u32 remaining = (u32)( (u64)NUS3BANK_SIZE > consumed ? (u64)NUS3BANK_SIZE - consumed : 0ULL );
+
+    // читаем оставшиеся данные ровно до конца NUS3BANK
+    u8 TrailingData[ remaining ] <hidden=true>;
+
+
+} TNuccNUS3;
+typedef struct
+{
+    u8 Data[FileSize];
+} TNuccNubOld;
+typedef struct
+{
+    struct T_UTF UTF;
+    
+} TNuccACB;
+
+typedef struct
+{
+    char Signature[4];
+    u32 TableSize;
+    u8 I_00; //idk what is that
+    u8 EncodingType;
+    u16 RowOffset;
+    u32 StringOffset;
+    u32 DataOffset;
+    u32 TableNameOffset; //stringsOffset + TabbleNameOffset;
+    u16 ColumnCount;
+    u16 RowLength;
+    u32 RowCount;
+    local int i;
+    struct{
+        for (i=0; i<ColumnCount;i++){
+            struct{
+              u8 flag; //1st StorageFlag, 2nd Type Flag
+              u32 NameOffset;
+                
+            }Column;
+    };
+    }Columns;
+    
+    
+}T_UTF;
+typedef struct
+{
+    u32 dataPtr;
+    u32 Size;
+} TToneEntry;
+typedef struct
+{
+    u32 EntryID;
+    u32 unk_flag;
+    float PlayChance;
+    u32 ToneID<read=ReadToneNameIndex>;
+    
+} TToneRandomizerEntry;
+
+typedef struct{
+    char HeaderName[4];
+    u32 Size;
+    local u64 baseOffset = FTell();
+    u32 EntryCount;
+    
+    
+    TToneEntry ToneOffset[ EntryCount ];
+    local u64 entryOffset;
+    local int j, k;
+    struct{
+        for ( j = 0; j < EntryCount; ++j )
+        {
+            // guard: if size zero, create empty placeholder
+            entryOffset = ToneOffset[j].dataPtr+baseOffset;
+    
+            // seek to the block start
+            FPush();
+            FSeek( entryOffset );
+            if (HeaderName[0] == 0x54
+                 && HeaderName[1] == 0x4F
+                  && HeaderName[2] == 0x4E
+                  && HeaderName[3] == 0x45) //TONE
+                struct TEntryTONE TONE;
+            else if (HeaderName[0] == 0x44
+                 && HeaderName[1] == 0x54
+                  && HeaderName[2] == 0x4F
+                  && HeaderName[3] == 0x4E) //DTON
+                struct TEntryDTON DTON;
+            FPop();
+    
+        }
+    }ToneEntries;
+    
+}TDataTONE;
+
+
+typedef struct{
+    local string EntryName = "Empty Slot";
+    local string readString = "";
+    u32 DTON_ID <read=ReadDTONNameIndex>;
+    u8 flag1[4];
+    u8 flag2[4];
+    if (flag1[0] != 1){
+        u8 name_length;
+        char TONE_NAME[name_length];
+        EntryName = TONE_NAME;
+        if ((name_length+1)%4 != 0)
+            FSkip(4-((name_length+1)%4));
+        u32 EnableRandomizer;
+        if (EnableRandomizer == 1){
+            u32 randomizerSize;
+            int randomizer_flag;
+            u32 randomzierEntryCount;
+            for (k = 0; k <randomzierEntryCount; k++){
+                
+                struct TToneRandomizerEntry RandomizerEntry;
+            }
+            float unk_float[5];
+            int unk;
+        }
+        else{
+            u32 SoundOffsetSize;
+            u32 SoundPtr;
+            u32 SoundSize;
+            local u32 back_offset = FTell();
+            FSeek(PACK_OFFSET+8+SoundPtr);
+            if (SoundSize > 0){
+                struct{
+                BigEndian();
+                char   magic[4];
+                
+                if (magic[0] == 0x42
+                 && magic[1] == 0x4E
+                  && magic[2] == 0x53
+                  && magic[3] == 0x46) //BNSF
+                  {
+                    
+                    uint32 file_size;           // BE; total file size in bytes
+                    char   format[8];           // "IS14\0\0\0\0" or "IS22\0\0\0\0" (varies per game)
+                    uint32 flags;               // often 0x00000000 or 0x00000001 (stream/packing flags)
+                    uint32 channels;            // 1 or 2 most commonly
+                    uint32 sample_rate;         // 32000 for IS14C; 48000 for IS22/G.719 is common, varies by title
+                    uint32 total_samples;       // total PCM samples (per channel)
+                    uint32 loop_start;          // 0 or -1 (0xFFFFFFFF) when no loop
+                    uint32 loop_end;            // total_samples when looping to end, else 0/-1 when no loop
+                    char   codec4cc[4];         // often repeats "IS14"/"IS22" or short code used by engine
+                    uint32 data_size;           // size of following raw stream bytes
+                    
+                    
+                    struct
+                    {
+                        byte rawbytes;
+                    }RawData[data_size];
+                  }
+                  else{
+                      
+                    u8 RawData[SoundSize-4];
+                  }
+                
+                
+                LittleEndian();
+            }SoundData;
+            }
+            
+            FSeek(back_offset);
+            float Volume;
+            float PlayOffsetX;
+            float unk_float1;
+            float unk_float2;
+            float unk_float3;
+            float unk_float4;
+            float PlayOffsetY;
+            float unk_float5;
+            int PlayStart;
+            int PlayEnd;
+            int PlayDelay;
+            int unk_val3;
+            int GroupCount;
+            struct{
+               for (k = 0; k<GroupCount; k++){
+                    u32 GroupID <read=ReadGroupNameIndex>; 
+               } 
+            }Groups;
+             
+
+            
+            int channel_count;
+            struct{
+                for (k = 0; k<channel_count; k++){
+                    struct{
+                        int channel_id;  
+                        float Volume; 
+                    }channel_values;
+                }
+            }channels;
+            
+            int unk_val6;
+            float unk_val7;
+            float unk_val12;
+            int unk_val13;
+            if (IsFlagBitSet(flag2[0],1))
+                int unk_val14;
+            if (IsFlagBitSet(flag2[0],2))
+                int unk_val15;
+            if (IsFlagBitSet(flag2[0],3))
+                int unk_val16;
+            if (IsFlagBitSet(flag2[0],4)){
+                int sample_rate;
+                SPrintf( readString, "sample_rate: %d", sample_rate);
+            }
+            if (IsFlagBitSet(flag2[0],5))
+                enum ChannelList channel_type <read=GetChannelType>;
+            if (IsFlagBitSet(flag2[0],6)){
+                int total_samples1;
+                int channel_id1; //not sure
+            }
+            
+            if (IsFlagBitSet(flag2[0],7))
+                int total_samples2;
+            if (IsFlagBitSet(flag2[0],2))
+                int unk_val18;
+            int channel_id2;
+            int unk_val20; //Waiting for sound to finish if set that and next value to 1
+            int unk_val21; //Waiting for sound to finish if set that and previous value to 1
+            
+            if (IsFlagBitSet(flag2[1],3))
+                int EnableOverlay;
+        }
+        
+    }
+}TEntryTONE<name=EntryName, read=readString>;
+
+
+typedef struct{
+    local string EntryName = "Empty Slot";
+    local string readString = "";
+    u32 ID;
+    u8 flag[4];
+    u8 unk_val[4];
+    if (flag[0] != 1){
+        u8 name_length;
+        char TONE_NAME[name_length];
+        EntryName = TONE_NAME;
+        if ((name_length+1)%4 != 0)
+            FSkip(3-((name_length)%4));
+
+        
+    }
+}TEntryDTON<name=EntryName, read=readString>;
+
+
+typedef struct
+{
+    char HeaderName[4];
+    u32 Size;
+    FSkip(4);
+    u32 unk1;
+    u8 name_length;
+    char name[name_length];
+    local u64 baseOffset = FTell();
+    char Padding[3-((name_length)%4)]<hidden=true>;
+    u32 FileID;
+} TDataBINF;
+
+typedef struct
+{
+    local int k;
+    
+    char HeaderName[4];
+    u32 Size;
+    local u32 start_offset = FTell();
+    u32 entryCount;
+    struct{
+        struct{
+            u32 pointer;
+            u32 size;
+        }entry[entryCount];
+    }Pointers;
+    struct{
+        for (k = 0; k<entryCount; k++){
+            struct{
+                local string ent_name = "???";
+                FSeek(start_offset+parentof(parentof(this)).Pointers.entry[k].pointer);
+                u32 unk1;
+                u32 unk2;
+                s8 name_length;
+                if (name_length>0){
+                    
+                    char EntryName[name_length];
+                    char Padding[3-name_length%4];
+                    ent_name = EntryName;
+                }else{
+                    
+                    char Padding[3];
+                }
+            }entry<name=ent_name>;
+        }
+        
+    }Entries;
+} TDataGRP;
+
+string ReadTDataTone( struct TEntryTONE& value )
+{
+
+    if ( value.sample_rate &&  value.channels)
+    {
+        local int sample_rate = value.sample_rate;
+        local int channels = value.channels;
+
+    }
+
+    return value.readString;
+}
+
+string ReadToneNameIndex( u32& value )
+{
+    local string st = parentof(parentof(parentof(parentof(value)))).ToneEntries.TONE[value].TONE_NAME;
+    return st;
+}
+
+bool IsFlagBitSet(unsigned int flag, int bitIndex)
+{
+    if (bitIndex < 1 || bitIndex > 8) return false;
+    return ( ((flag >> (8 - bitIndex)) & 1) != 0 );
+}
+
+string ReadGroupNameIndex( u32& value )
+{
+    local string st = parentof(parentof(parentof(parentof(parentof(value))))).GRP_DATA.Entries.entry[value].EntryName;
+    return st;
+}
+
+string ReadDTONNameIndex( u32& value )
+{
+    local string st = parentof(parentof(parentof(parentof(value)))).DTON_DATA.ToneEntries.DTON[value].TONE_NAME;
+    return st;
+}

@@ -85,10 +85,6 @@ typedef struct
         int64 DictionaryIndex;
         
 
-        if (CharacterCode == "9hgr00")  
-        {
-            Printf("FOUND at Index = %d", Count2);
-        }
         Count2 += 1;
         
     }

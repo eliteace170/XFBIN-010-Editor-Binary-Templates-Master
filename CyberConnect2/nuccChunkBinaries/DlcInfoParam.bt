@@ -1,0 +1,108 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+
+local int Pos;
+
+struct{
+
+uint64 dlcIdOffset <hidden= true>;
+Pos = FTell();
+FSeek(Pos - 8 + dlcIdOffset);
+string Steam_DLC_ID; //steam appID
+FSeek(Pos);
+
+uint64 offset0 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset0);
+string PS5_DLC_ID;
+FSeek(Pos);
+
+uint64 offset1 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset1);
+string PS4_DLC_ID;
+FSeek(Pos);
+
+uint64 offset2 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset2);
+string Nintendo_DLC_ID;
+FSeek(Pos);
+
+uint64 offset3 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset3);
+string XBOX_DLC_ID;
+FSeek(Pos);
+
+uint Index;
+uint unk1;
+
+uint64 abc;
+
+uint64 offset4 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset4);
+string string4;
+FSeek(Pos);
+
+uint64 unk4;
+
+uint64 offset5 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + offset5);
+string string5;
+FSeek(Pos);
+
+
+uint64 offset6 <hidden = true>;;
+Pos = FTell();
+FSeek(Pos - 8 + offset6);
+string string6;
+FSeek(Pos);
+
+uint64 offset7 <hidden = true>;;
+Pos = FTell();
+FSeek(Pos - 8 + offset7);
+string string7;
+FSeek(Pos);
+
+uint64 unk;
+
+uint64 offset9 <hidden = true>;;
+Pos = FTell();
+FSeek(Pos - 8 + offset9);
+string string9;
+FSeek(Pos);
+
+
+uint64 offset10 <hidden = true>;;
+Pos = FTell();
+FSeek(Pos - 8 + offset10);
+string string10;
+FSeek(Pos);
+
+
+}DLC[Count] <optimize=false>;
+}
+DlcInfoParam <optimize = false>;

@@ -13,11 +13,14 @@
 
 #include "nuccChunkBinaries/pairSpSkillCombinationParam.bt"
 #include "nuccChunkBinaries/prmParam.bt"
-#include "nuccChunkBinaries/characterSelectParam.bt"
 #include "nuccChunkBinaries/acc.bin.bt"
 #include "nuccChunkBinaries/accessoriesParam.bt"
 #include "nuccChunkBinaries/accessoryExceptionParam.bt"
 #include "nuccChunkBinaries/accessoryNotAttachParam.bt"
+#include "nuccChunkBinaries/accessoryParam.bt"
+#include "nuccChunkBinaries/ApperenceAnm.bt"
+#include "nuccChunkBinaries/awakeaura.bt"
+#include "nuccChunkBinaries/characterSelectParam.bt"
 #include "nuccChunkBinaries/CharaPoseParam.bt"
 #include "nuccChunkBinaries/charaTagParam.bt"
 #include "nuccChunkBinaries/chatStampParam.bt"
@@ -26,6 +29,32 @@
 #include "nuccChunkBinaries/costumeBreakColorParam.bt"
 #include "nuccChunkBinaries/costumeBreakParam.bt"
 #include "nuccChunkBinaries/costumeParam.bt"
+#include "nuccChunkBinaries/damageeff.bin.bt"
+#include "nuccChunkBinaries/DictionaryCharacterParam.bt"
+#include "nuccChunkBinaries/DlcInfoParam.bt"
+#include "nuccChunkBinaries/duelPlayerParam.bt"
+#include "nuccChunkBinaries/ev.bt"
+#include "nuccChunkBinaries/ev_spl.bt"
+#include "nuccChunkBinaries/finalSpSkillCutIn.bt"
+#include "nuccChunkBinaries/homeBgParam.bt"
+#include "nuccChunkBinaries/itemCustomizeParam.bt"
+#include "nuccChunkBinaries/iteminfo.bt"
+#include "nuccChunkBinaries/logParam.bt"
+#include "nuccChunkBinaries/musicParam.bt"
+#include "nuccChunkBinaries/netMenuParam.bt"
+#include "nuccChunkBinaries/nickNameParam.bt"
+#include "nuccChunkBinaries/NinjaCardsSkinParam.bt"
+#include "nuccChunkBinaries/ninjaInfoCardsParam.bt"
+#include "nuccChunkBinaries/optionParam.bt"
+#include "nuccChunkBinaries/OugiFinishParam.bt"
+#include "nuccChunkBinaries/playerDoubleEffectParam.bt"
+#include "nuccChunkBinaries/playerSettingParam.bt"
+#include "nuccChunkBinaries/privateCamera.bt"
+#include "nuccChunkBinaries/SkillIndexParam.bt"
+#include "nuccChunkBinaries/SoundEvent.bt"
+#include "nuccChunkBinaries/specialChatParam.bt"
+#include "nuccChunkBinaries/spTypesupport.bt"
+#include "nuccChunkBinaries/voiceParam.bt"
 
 typedef struct
 {  
@@ -33,6 +62,13 @@ typedef struct
         { 
             case ("pairSpSkillCombinationParam"):
                 struct pairSpSkillCombinationParam TeamOugiIndex;
+                break;
+            case ("acc"):
+            case ("acc.bin"):
+                struct AccesoriesSettings Accessory;
+                break;
+            case ("accessoriesParam"):
+                struct accessoriesParam AccessoriesData;
                 break;
             case ("accessoryExceptionParam"):
                 struct accessoryExceptionParam accessoryException;
@@ -43,6 +79,13 @@ typedef struct
             case ("accessoryParam"):
                 struct accessoryParam AccessoryParam;
                 break; 
+            case ("ApperenceAnm"):
+                struct ApperenceAnm ApperenceAnmData;
+                break;
+            case ("awakeaura"):
+            case ("awakeAura"):
+                struct awakeaura AwakeAuraData;
+                break;
             case ("characterSelectParam"):
                 struct characterSelectStruct CharacterSelectData;
                 break;
@@ -69,6 +112,84 @@ typedef struct
                 break;
             case ("costumeParam"):
                 struct costumeParam costumeParamData;
+                break;
+            case ("damageeff.bin"):
+                struct damageeff_bin DamageEffectData;
+                break;
+            case ("DictionaryCharacterParam"):
+                struct DictionaryCharacterParam DictionaryCharacterData;
+                break;
+            case ("DlcInfoParam"):
+                struct DlcInfoParam DlcInfoData;
+                break;
+            case ("duelPlayerParam"):
+                struct duelPlayerParam DuelPlayerData;
+                break;
+            case ("ev"):
+                struct BattleSoundStruct BattleSoundData;
+                break;
+            case ("ev_spl"):
+                struct SoundEventStruct CutsceneSoundData;
+                break;
+            case ("finalSpSkillCutIn"):
+                struct finalSpSkillCutIn FinalSpSkillCutInData;
+                break;
+            case ("homeBgParam"):
+                struct homeBgParam HomeBgData;
+                break;
+            case ("itemCustomizeParam"):
+                struct itemCustomizeParam ItemCustomizeData;
+                break;
+            case ("iteminfo"):
+                struct iteminfo ItemInfoData;
+                break;
+            case ("logParam"):
+                struct logParam LogData;
+                break;
+            case ("musicParam"):
+                struct musicParam MusicData;
+                break;
+            case ("netMenuParam"):
+                struct netMenuParam NetMenuData;
+                break;
+            case ("nickNameParam"):
+                struct nickNameParam NickNameData;
+                break;
+            case ("NinjaCardsSkinParam"):
+                struct NinjaCardsSkinParam NinjaCardsSkinData;
+                break;
+            case ("ninjaInfoCardsParam"):
+                struct ninjaInfoCardsParam NinjaInfoCardsData;
+                break;
+            case ("optionParam"):
+                struct optionParam OptionData;
+                break;
+            case ("OugiFinishParam"):
+                struct OugiFinishParam OugiFinishData;
+                break;
+            case ("playerDoubleEffectParam"):
+                struct playerDoubleEffectParam PlayerDoubleEffectData;
+                break;
+            case ("playerSettingParam"):
+                struct playerSettingParam PlayerSettingData;
+                break;
+            case ("privateCamera"):
+                struct privateCamera PrivateCameraData;
+                break;
+            case ("SkillIndexParam"):
+                struct SkillIndexParam SkillIndexData;
+                break;
+            case ("SoundEvent"):
+                struct SoundEvent SoundEventData;
+                break;
+            case ("specialChatParam"):
+                struct specialChatParam SpecialChatData;
+                break;
+            case ("spTypesupport"):
+                struct spTypesupport SpTypeSupportData;
+                break;
+            case ("voiceParam"):
+                struct voiceParam VoiceData;
                 break;
             default:
                 // Compare chunkName to each suffix
@@ -107,8 +228,16 @@ typedef struct
                     } 
                 else if (EndsWith(chunkName, "acc") )
                     {
-                         struct AccesoriesSettings Accessory;         
+                         struct AccesoriesSettings AccessoryBySuffix;         
                     } 
+                else if (EndsWith(chunkName, "_atk_snd") || EndsWith(chunkName, "_cut_snd") )
+                    {
+                         struct SoundEventStruct CutsceenSounds;         
+                    } 
+				else if (EndsWith(chunkName, "_ev") )
+                    {
+                         struct BattleSoundStruct BattleSounds;         
+                    }
                 else
                 {
                     uchar Data[Size];

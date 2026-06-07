@@ -72,5 +72,5 @@ typedef struct
     }
     StringEntriesSectior[remainingSize];
 }
-accessoryParam;
+accessoriesParam;
 

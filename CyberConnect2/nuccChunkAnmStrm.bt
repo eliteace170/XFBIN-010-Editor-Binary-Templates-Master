@@ -15,6 +15,12 @@
 #include "/../include.h";
 
 //BigEndian();
+typedef struct
+{
+    u32 Offset;
+    u32 Frame;
+} TStrmFrameInfo <read=ReadTStrmFrameInfo>;
+
 typedef struct {
     
     u32 AnmLength;
@@ -31,7 +37,7 @@ typedef struct {
 
     local int i;
 
-    local int frameCount = AnmLength/FrameSize;
+    local int FrameCount = FrameSize != 0 ? AnmLength / FrameSize : 0;
     struct{
     for (i = 0; i < ClumpCount; i++)
         {
@@ -56,18 +62,19 @@ typedef struct {
 
     struct{
 
-        for (i = 0; i < frameCount; i++)
+        for (i = 0; i < FrameCount; i++)
             {
-                struct
-                {   
-                    u16 unk1;
-                    u16 unk2;
-                    u32 frame;
-        
-                } Frame;
+                struct TStrmFrameInfo FrameInfo;
             }
     }Frames;
     
     
 
 } TNuccAnmStrm;
+
+string ReadTStrmFrameInfo(TStrmFrameInfo& value)
+{
+    local string str;
+    SPrintf(str, "Frame %d @ 0x%X", value.Frame, value.Offset);
+    return str;
+}

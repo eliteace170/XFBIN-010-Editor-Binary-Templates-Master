@@ -1,0 +1,104 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+BigEndian();
+uint size;
+
+LittleEndian();
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+
+struct
+{
+    uint32 CharacodeID;
+    int32 Unused;
+    uint64 BoneNameOffset;
+    Pos = FTell();
+    FSeek(Pos + BoneNameOffset - 8);
+    string BoneName;
+    FSeek(Pos);
+    
+    int32 AnimationStart;
+    int32 AnimationEnd;
+    int32 Unknown;  // 0 = big effect?, 1 = sound only
+    int32 Unknown;
+    
+    uint64 EffectNameOffset;
+    if (EffectNameOffset > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + EffectNameOffset - 8);
+        string EffectName;
+        FSeek(Pos);
+    }
+    
+    uint64 ANMname1Off;
+    if (ANMname1Off > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + ANMname1Off - 8);
+        string ANMname1;
+        FSeek(Pos);
+    }
+    
+    uint64 ANMname2Off;
+    if (ANMname2Off > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + EffectNameOffset - 8);
+        string ANMname2;
+        FSeek(Pos);
+    }
+    
+    uint64 ANMname3Off;
+    if (ANMname3Off > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + EffectNameOffset - 8);
+        string ANMname3;
+        FSeek(Pos);
+    }
+    
+    uint64 ANMname4Off;
+    if (ANMname4Off > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + EffectNameOffset - 8);
+        string ANMname4;
+        FSeek(Pos);
+    }
+    uint64 ANMname5Off;
+    if (ANMname5Off > 0)
+    {
+        Pos = FTell();
+        FSeek(Pos + EffectNameOffset - 8);
+        string ANMname5;
+        FSeek(Pos);
+    }
+    float Unknown;
+    float SpawnLocation;
+    int32 CommonIdSound;
+    int32 Unknown;
+    int32 Unknown;
+    int32 Unknown;
+    int32 Unknown;
+    int32 Unknown;
+    int32 Unknown;
+    uint32 padding;
+}pDEF[Count] <optimize = false, read = BoneName>;
+}
+playerDoubleEffectParam <optimize = false>;

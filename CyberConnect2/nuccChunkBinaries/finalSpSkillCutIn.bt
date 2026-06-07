@@ -1,0 +1,96 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+BigEndian();
+
+
+uint size;
+LittleEndian();
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+local int PlayerSettingID;
+local int OUGI_Name;
+local int string_count = 0;
+
+struct
+{
+	struct
+	{
+		int32 StoryModeID;
+		int32 TeamUltID;
+		int32 PlayerSettingID;
+		int32 unk_CostumeSlot;
+		uint64 OUGI1_Offset;
+		if (OUGI1_Offset > 0)
+		{
+			Pos = FTell();
+			FSeek(Pos + OUGI1_Offset - 8);
+			string OUGI_Name;
+			FSeek(Pos);
+		}
+		uint64 OUGI1_Offset2;
+		if (OUGI1_Offset2 > 0)
+		{
+			Pos = FTell();
+			FSeek(Pos + OUGI1_Offset2 - 8);
+			string OUGI_Name2;
+			FSeek(Pos);
+		}
+		int32 Padding1;
+		
+		local int i;
+		struct
+		{
+			for (i = 0; i < 50; i++)
+			{	
+				struct
+				{
+					int32 PlayerSettingID_Victim;
+					uint64 Victim_FileName_Offest;
+					if (Victim_FileName_Offest > 0)
+					{
+						Pos = FTell();
+						FSeek(Pos + Victim_FileName_Offest - 8);
+						string Spl_Fin_FileName;
+						FSeek(Pos);
+					}
+					uint64 Victim_TextureName_Offest;
+					if (Victim_TextureName_Offest > 0)
+					{
+						Pos = FTell();
+						FSeek(Pos + Victim_TextureName_Offest - 8);
+						string Spl_Fin_TextureName;
+						FSeek(Pos);
+					}
+					FSkip(4);
+				}Victim <read = PlayerSettingID_Victim>;
+			}
+		}Spl_Fin_Victims;
+
+		
+		int32 Padding2;
+	}finalsp[Count] <read = PlayerSettingID, optimize = false>;
+}finalSpSkillCutInEntries <optimize = false>;
+
+struct
+{
+	  
+
+}finalSpSkillCutInStrings <optimize = false>;
+
+}
+finalSpSkillCutIn <optimize = false>;

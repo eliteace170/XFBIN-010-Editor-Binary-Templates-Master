@@ -1,130 +1,196 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
-//   Authors: SutandoTsukai181
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
-//  Category: 
-// File Mask: 
-//  ID Bytes: 
-//   History: 
+//      File: nuccChunkTrail.bt
+//   Authors: SutandoTsukai181, TheLeonX, Hydra
+//   Version: 1.1
+//   Purpose: Parse CC2 nuccChunkTrail data
+//   History:
 //   1.0 - Initial release
+//   1.1 - Names/layout updated from Blender-XFBIN-Importer br_trail.py
 //------------------------------------------------
 
 #include "/../include.h";
 
+#ifndef XFBIN_CHUNK_INDEX_READERS
+#define XFBIN_CHUNK_INDEX_READERS
+string ReadTXfbinChunkIndexU32(u32& value, u32 pageStart)
+{
+    local string str;
+    if (exists(Xfbin) && pageStart + value < Xfbin.ChunkTable.ChunkMapIndicesCount)
+    {
+        return ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(value, pageStart)]);
+    }
+    SPrintf(str, "ChunkIndex[%u]", value);
+    return str;
+}
+
+string ReadTXfbinChunkIndexS32(s32& value, u32 pageStart)
+{
+    local string str;
+    if (value < 0)
+    {
+        SPrintf(str, "ChunkIndex[%d]", value);
+        return str;
+    }
+    if (exists(Xfbin) && pageStart + value < Xfbin.ChunkTable.ChunkMapIndicesCount)
+    {
+        return ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(value, pageStart)]);
+    }
+    SPrintf(str, "ChunkIndex[%d]", value);
+    return str;
+}
+#endif
+
 typedef struct
 {
-    local int i;
+    u32 Position;
+    u16 EntryCount;
+    u16 EntrySize;
+} TTrailHeader;
 
-    struct{
-        u32 Position;
-        u16 EntryCount;
-        u16 EntrySize; //was used for 1st and 5th entries, 2nd and 3rd can be anything. Never was used for 4th 
-    }TrailHeaders[5];
-    struct{
-        struct{
-            u32 ChunkMapID_Animation;
-            u32 EntryID;
-            FSkip(0x0C);
-            u32 FadeTime;
-            u32 unk; //doesn't really do anything
-            u16 unk1; //doesn't really do anything
-            u16 unk2; //doesn't really do anything
-            struct{
-                struct{
-                    float R_channel;
-                    float G_channel;
-                    float B_channel;
-                    float A_channel;
-                }Color[3];
-            }TrailColor; //GradientColor
-            float BlendValue; //less value will blend color mainly with 1st and 2nd, bigger value will blend color mainly with 2nd and 3rd color
-            struct{
-                struct{
-                    u16 FirstBone; 
-                    u16 SecondBone; 
-                }Width[3];
-            }TrailWidth;
-        }TrailSetting_Entry[TrailHeaders[0].EntryCount];
-        struct{
-            u32 ChunkMapID_Billboard;
-            u32 EntryID;
-            FSkip(0x18);
-        }TrailMaterial[TrailHeaders[1].EntryCount];
-        struct{
-            u32 ChunkMapID_Coord;
-            u32 EntryID;
-            FSkip(0x18);
-            u32 ChunkMapID_Clump;
-            FSkip(0xC);
-        }TrailBones[TrailHeaders[2].EntryCount];
+typedef struct
+{
+    u16 Raw;
+    local float Value = ((float)Raw / 0xFFFF) * 100.0;
+} TTrailScaleU16 <read=ReadTTrailScaleU16>;
 
+string ReadTTrailScaleU16(TTrailScaleU16& value)
+{
+    local string str;
+    SPrintf(str, "%.6f", value.Value);
+    return str;
+}
 
-        struct{
-            local int j;
-            local int x;
-            local int entry_size = 4;
-            for (j = 0; j<TrailHeaders[4].EntryCount; j++)
-            {
-                entry_size = 0;
-                struct{
-                    FSkip(0x4);
-                    u32 EntryID;
-                    FSkip(0x8);
-                    int TimeEntryCount;
-                    for (x = 0; x < TimeEntryCount; x++){
+typedef struct
+{
+    u16 Raw;
+    local float Value = (float)Raw / 0xFFFF;
+} TTrailU16Norm <read=ReadTTrailU16Norm>;
 
-                        struct{
-                            u16 ParticleEnabler;
-                            u16 Timing;
-                            local string isEnabled = "???";
-                            if (ParticleEnabler != 0){
-                                isEnabled = "ENABLED";
-                            }
-                            else{
-                                isEnabled = "DISABLED";
-                            }
-                        }TimeEntry <comment=isEnabled>;
-                        entry_size = entry_size + 4;
-                    }
-                   
-                    FSkip((4 + (TimeEntryCount * 4)) % 8);
-                }TimeEntries;
-            }
-        }TrailTimelines;
-        /*struct{
-            local int j;
-            local int x;
-            local int entry_size = 4;
-            for (i = 0; i < TrailHeaders[4].EntryCount; i++){
-                FSkip(0x4);
-                u32 EntryID;
-                FSkip(0x8);
-                u32 valueCount;
-                for (x = 0; x < valueCount; x++){
-    
-                            struct{
-                                u16 ParticleEnabler;
-                                u16 Timing;
-                                local string isEnabled = "???";
-                                if (ParticleEnabler != 0){
-                                    isEnabled = "ENABLED";
-                                }
-                                else{
-                                    isEnabled = "DISABLED";
-                                }
-                            }TimeEntry <comment=isEnabled>;
-                            entry_size = entry_size + 4;
-                        }
-                       
-                        FSkip((4 + (TimeEntryCount * 4)) % 8);
-                    }TimeEntries;
-                    FSkip((4 + (TimeEntryCount * 4)) % 8);
-                }
-        }TrailTimelines;*/
-    }TrailHeaderEntries;
+string ReadTTrailU16Norm(TTrailU16Norm& value)
+{
+    local string str;
+    SPrintf(str, "%.6f", value.Value);
+    return str;
+}
 
+typedef struct
+{
+    f32 R;
+    f32 G;
+    f32 B;
+    f32 A;
+
+    local int bgcolor_trail = (R * 0xFF) + (G * 0xFF) * 0x100 + (B * 0xFF) * 0x10000;
+} TTrailColor <bgcolor=bgcolor_trail>;
+
+typedef struct
+{
+    u32 AnimationChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 EntryIndex;
+    u32 Field08;
+    u32 Field0C;
+    u32 Field10;
+    u32 Lifetime;
+    u16 TrailType;
+    u16 Field1A;
+    struct TTrailU16Norm Field1C;
+    struct TTrailU16Norm Field1E;
+
+    struct TTrailColor ColorStart;
+    struct TTrailColor ColorMiddle;
+    struct TTrailColor ColorEnd;
+    f32 ColorFactor;
+
+    struct TTrailScaleU16 ScaleFirstBoneStart;
+    struct TTrailScaleU16 ScaleSecondBoneStart;
+    struct TTrailScaleU16 ScaleFirstBoneMiddle;
+    struct TTrailScaleU16 ScaleSecondBoneMiddle;
+    struct TTrailScaleU16 ScaleFirstBoneEnd;
+    struct TTrailScaleU16 ScaleSecondBoneEnd;
+} TTrailManager <optimize=false>;
+
+typedef struct
+{
+    u32 EffectChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 TrailEntryIndex;
+    u32 Field08;
+    u32 Field0C;
+    u32 Field10;
+    u32 Field14;
+    u32 Field18;
+    u32 Field1C;
+} TTrailResource <optimize=false>;
+
+typedef struct
+{
+    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 TrailEntryIndex;
+    s32 Field08;
+    s32 Field0C;
+    s32 Field10;
+    s32 Field14;
+    s32 Field18;
+    s32 Field1C;
+    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    s32 Field24;
+    s32 Field28;
+    s32 Field2C;
+} TTrailPosition <optimize=false>;
+
+typedef struct
+{
+    s32 Field00;
+    u32 TrailEntryIndex;
+    s32 Field08;
+    s32 Field0C;
+    struct TTrailU16Norm Field10;
+    struct TTrailU16Norm Field12;
+    f32 Field14;
+    s32 Field18;
+    s32 Field1C;
+    s32 Field20;
+    f32 Field24;
+    f32 Field28;
+    s32 Field2C;
+    s32 Field30;
+    s32 Field34;
+    s32 Field38;
+    s32 Field3C;
+} TTrailForceField <optimize=false>;
+
+typedef struct
+{
+    u16 Flag;
+    u16 FrameRaw;
+    local float Frame = (float)FrameRaw / 0x64;
+} TTrailFrame <read=ReadTTrailFrame>;
+
+string ReadTTrailFrame(TTrailFrame& value)
+{
+    local string str;
+    SPrintf(str, "%s %.2f", value.Flag ? "ENABLED" : "DISABLED", value.Frame);
+    return str;
+}
+
+typedef struct
+{
+    u32 Field00;
+    u32 TrailEntryIndex;
+    u32 Field08;
+    u32 Field0C;
+    u32 FrameCount;
+    struct TTrailFrame Frames[FrameCount] <optimize=false>;
+    FSkip((4 + (FrameCount * 4)) % 8);
+} TTrailNode <optimize=false>;
+
+typedef struct
+{
+    struct TTrailHeader TrailHeaders[5];
+    struct TTrailManager TrailManagers[TrailHeaders[0].EntryCount] <optimize=false>;
+    struct TTrailResource TrailResources[TrailHeaders[1].EntryCount] <optimize=false>;
+    struct TTrailPosition TrailPositions[TrailHeaders[2].EntryCount] <optimize=false>;
+    struct TTrailForceField TrailForceFields[TrailHeaders[3].EntryCount] <optimize=false>;
+    struct TTrailNode TrailNodes[TrailHeaders[4].EntryCount] <optimize=false>;
 } TNuccTrail;
-

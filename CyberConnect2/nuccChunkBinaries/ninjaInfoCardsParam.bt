@@ -1,0 +1,52 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+
+local int Pos;
+
+struct{
+uint64 infoCardOffset <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + infoCardOffset);
+string infoCardString;
+FSeek(Pos);
+
+uint64 Index;
+
+uint64 Offset1 <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset1);
+string String1;
+FSeek(Pos);
+
+uint64 Offset2 <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset2);
+string String2;
+FSeek(Pos);
+
+uint64 unk;
+uint Cost;
+uint UnlockCondition;
+}InfoCard[Count]<optimize= false>;
+}
+ninjaInfoCardsParam <optimize = false>;

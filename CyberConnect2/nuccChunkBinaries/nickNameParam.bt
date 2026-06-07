@@ -1,0 +1,67 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+local int Pos;
+
+struct{
+uint64 CardSkinOffset <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + CardSkinOffset);
+string CardSkinString;
+FSeek(Pos);
+
+uint64 Index;
+
+
+uint64 Offset0 <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset0);
+string string0;
+FSeek(Pos);
+
+uint unk;
+
+uint Cost;
+uint UnlockCondition;
+
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+
+
+}NickName[Count]<optimize= false, read= CardSkinString>;
+}
+nickNameParam <optimize = false>;

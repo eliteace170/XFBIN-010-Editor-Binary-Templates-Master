@@ -1,0 +1,150 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+enum <int32> ActionModeFlag 
+    {
+        Left_Right = 0,   
+        AllDirections = 1,  
+             
+    };
+enum <int32> CharacterState 
+    {
+        Base = 0,   
+        TrueAwakening = 1,  
+        BaseAndTrueAwakening = 2,
+        InstantAwakening = 3,
+        BaseAndInstantAwakening = 4,
+        InstantAndTrueAwakening = 5,
+        AllStates = 6
+             
+    };
+string GetCharacterStateString(uint state)
+{
+    if ( state == 0 ) return "Base";
+    else if ( state == 1 ) return "Awakening";
+    else if ( state == 2 ) return "Normal + Awakening";
+    else if ( state == 3 ) return "Instant Awakening";
+    else if ( state == 4 ) return "Base Mode & Instant Awakening";
+    else if ( state == 5 ) return "Instant Awakening & True Awakening";
+    else if ( state == 6 ) return "Base Mode & Instant Awakening & True Awakening";
+    else return "Unknown";
+}
+
+typedef struct
+{
+FSkip (0x128);
+BigEndian();
+
+
+uint size;
+LittleEndian();
+uint Version;
+uint Count;
+uint64 page;
+
+local int Pos;           
+local int i;
+ 
+for (i = 0; i < Count; i++)
+{
+    struct
+        {
+            
+            uint characodeId;
+            ActionModeFlag InputType;
+            CharacterState State;
+            
+            uint unk1;
+            uint64 Up_Direction;
+		    if (Up_Direction > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + Up_Direction - 8);
+			    string Up_DirectionString;
+			    FSeek(Pos);
+		    }
+            uint EnableOnGround;
+            uint EnableInAir;
+            uint SpecialCondition;
+            float unkFloat1;
+            float unkFloat2;
+            float unkFloat3;
+            uint unk2;
+            uint unk3;
+            
+            
+            uint64 Down_Direction;
+		    if (Down_Direction > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + Down_Direction - 8);
+			    string Down_DirectionString;
+			    FSeek(Pos);
+		    }
+            uint EnableOnGround;
+            uint EnableInAir;
+            uint SpecialCondition;
+            float unkFloat1;
+            float unkFloat2;
+            float unkFloat3;
+            uint unk2;
+            uint unk3;
+            
+            uint64 Left_Direction;
+		    if (Left_Direction > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + Left_Direction - 8);
+			    string Left_DirectionString;
+			    FSeek(Pos);
+		    }
+            uint EnableOnGround;
+            uint EnableInAir;
+            uint SpecialCondition;
+            uint unk1;
+            uint unk2;
+            float unkFloat3;
+            uint unk3;
+            uint unk4;
+            
+            uint64 Right_Direction;
+		    if (Right_Direction > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + Right_Direction - 8);
+			    string Right_DirectionString;
+			    FSeek(Pos);
+		    }
+            uint EnableOnGround;
+            uint EnableInAir;
+            uint SpecialCondition;
+            uint unk1;
+            uint unk2;
+            float unkFloat3;
+            uint unk3;
+            uint unk4;
+       
+       
+           
+            
+        }
+    spTypeSupportParamEntries <read = Str("Characode: %u  State: %s", characodeId, GetCharacterStateString(State))>;
+};
+
+
+
+        
+        
+        
+}
+spTypesupport <optimize = false>;

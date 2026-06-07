@@ -36,7 +36,8 @@ typedef struct
 
         uint AwakeningModelFlag;
         uint ClonesFlag;
-        uint64 ClonesCount;
+        uint32 ClonesCount;
+        uint32 unk;
     }
     costumeBreak[Count] <optimize= false, read= Str("Code Index %d (Costume %d)", CharaCode, CostumeIndex)>;
 

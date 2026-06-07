@@ -1,0 +1,52 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkBillboard.bt
+//   Authors: SutandoTsukai181, TheLeonX, Hydra
+//   Version: 1.0
+//   Purpose: Contains structs for parsing nuccChunkBillboard chunks inside Xfbin files
+//  Category:
+// File Mask:
+//  ID Bytes:
+//   History:
+//   1.0 - Split from nucc.bt
+//------------------------------------------------
+
+#include "/../include.h";
+
+typedef struct
+{
+    u32 ModelIndex;
+    u32 Flags;
+    u16 FrameCount;
+    u16 Field0A;
+    u32 Field0C;
+
+    local u32 posFlag = (Flags >> 1) & 0x3;
+    local u32 rotFlag = (Flags >> 3) & 0x3;
+    local u32 scaleFlag = (Flags >> 5) & 0x3;
+    local u32 opacityFlag = (Flags >> 7) & 0x3;
+    local u32 uv1Flag = (Flags >> 9) & 0x3;
+    local u32 wh1Flag = (Flags >> 11) & 0x3;
+    local u32 uv2Flag = (Flags >> 13) & 0x3;
+    local u32 wh2Flag = (Flags >> 15) & 0x3;
+    local u32 blendRateFlag = (Flags >> 17) & 0x3;
+    local u32 blendRate2Flag = (Flags >> 19) & 0x3;
+    local u32 glareRateFlag = (Flags >> 21) & 0x3;
+    local u32 alphaRefFlag = (Flags >> 23) & 0x3;
+    local u32 outlineIdFlag = (Flags >> 25) & 0x3;
+
+    if ( posFlag ) { struct TVector3 PositionFrames[FrameCount]; }
+    if ( rotFlag ) { struct TVector3 RotationFrames[FrameCount]; }
+    if ( scaleFlag ) { struct TVector3 ScaleFrames[FrameCount]; }
+    if ( opacityFlag ) { f32 OpacityFrames[FrameCount]; }
+    if ( uv1Flag ) { struct TVector2 Uv1Frames[FrameCount]; }
+    if ( wh1Flag ) { struct TVector2 Wh1Frames[FrameCount]; }
+    if ( uv2Flag ) { struct TVector2 Uv2Frames[FrameCount]; }
+    if ( wh2Flag ) { struct TVector2 Wh2Frames[FrameCount]; }
+    if ( blendRateFlag ) { f32 BlendRateFrames[FrameCount]; }
+    if ( blendRate2Flag ) { f32 BlendRate2Frames[FrameCount]; }
+    if ( glareRateFlag ) { f32 GlareRateFrames[FrameCount]; }
+    if ( alphaRefFlag ) { f32 AlphaRefFrames[FrameCount]; }
+    if ( outlineIdFlag ) { f32 OutlineIdFrames[FrameCount]; }
+} TNuccBillboard <optimize=false>;

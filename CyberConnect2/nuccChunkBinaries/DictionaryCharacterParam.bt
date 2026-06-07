@@ -1,0 +1,166 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+local int count = 0;
+struct{
+    uint64 EmptyFlag;
+    
+    uint64 Offset1;
+    Pos = FTell();
+    FSeek(Pos + Offset1 - 8);
+    string string1;
+    FSeek(Pos);
+    
+    int unk0;
+    int unk1;
+    uint64 unk2;
+    uint64 unk3;
+    //uint64 unk0
+    
+    
+    uint64 Offset2;
+    Pos = FTell();
+    FSeek(Pos + Offset2 - 8);
+    string CharacterImage;
+    FSeek(Pos);
+    
+    uint64 Offset3;
+    Pos = FTell();
+    FSeek(Pos + Offset3 - 8);
+    string BackgroundImage;
+    FSeek(Pos);
+    
+    uint64 Offset4;
+    Pos = FTell();
+    FSeek(Pos + Offset4 - 8);
+    string CharacterName;
+    FSeek(Pos);
+    
+    uint64 Offset5;
+    Pos = FTell();
+    FSeek(Pos + Offset5 - 8);
+    string CharacterQuote;
+    FSeek(Pos);
+    
+    uint64 Offset6;
+    Pos = FTell();
+    FSeek(Pos + Offset6 - 8);
+    string UnkownCode;
+    FSeek(Pos);
+    
+    uint64 Offset7;
+    Pos = FTell();
+    FSeek(Pos + Offset7 - 8);
+    string CharacterBirthDate;
+    FSeek(Pos);
+    
+    uint64 Offset8;
+    Pos = FTell();
+    FSeek(Pos + Offset8 - 8);
+    string CharacterAffiliation;
+    FSeek(Pos);
+    
+    uint64 Offset9;
+    Pos = FTell();
+    FSeek(Pos + Offset9 - 8);
+    string CharacterHeight;
+    FSeek(Pos);
+    
+    uint64 Offset10;
+    Pos = FTell();
+    FSeek(Pos + Offset10 - 8);
+    string CharacterWeight;
+    FSeek(Pos);
+    
+    uint64 Offset11;
+    Pos = FTell();
+    FSeek(Pos + Offset11 - 8);
+    string string11;
+    FSeek(Pos);
+    
+    int unk3;
+    int unk4;
+    int unk5;
+    uint a[37];
+    /*uint64 b;
+    uint64 c;
+    uint64 d;
+    uint64 e;
+    uint64 f;
+    uint64 g;
+    uint64 h;
+    uint64 i;
+    uint64 j;
+    uint64 k;
+    uint64 l;
+    uint64 m;
+    uint64 n;
+    uint64 o;
+    uint64 p;
+    uint64 q;
+    uint64 r;*/
+    
+    uint64 Offset12;
+    Pos = FTell();
+    FSeek(Pos + Offset12 - 8);
+    string string12;
+    FSeek(Pos);
+    
+    uint64 Offset13;
+    Pos = FTell();
+    FSeek(Pos + Offset13 - 8);
+    string string13;
+    FSeek(Pos);
+    
+    uint64 Offset14;
+    Pos = FTell();
+    FSeek(Pos + Offset14 - 8);
+    string string14;
+    FSeek(Pos);
+    
+    byte Padding[120];
+
+    int64 flag1;
+    //int flag2;
+    /*
+    uint64 Offset15;
+    Pos = FTell();
+    FSeek(Pos + Offset15 - 8);
+    string string15;
+    FSeek(Pos);
+    */
+    
+    
+    if (flag1 != -1)
+    {
+        //Printf("flag1 = %d, at index (%d)\n", flag1, count);
+    }
+    count = count + 1;
+
+}dict[Count] <optimize = false>;
+/*
+struct{
+byte data[424];
+}abc[Count];*/
+}
+DictionaryCharacterParam <optimize = false>;

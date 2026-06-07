@@ -90,7 +90,27 @@ typedef struct
     u32 HashId;
     FSkip( 4 );
 
-    u8 TextureData[DataSize];
+    local int i;
+    local int size;
+
+    if (MipmapCount > 1)
+    {
+        struct
+        {
+            for (i = 0; i < MipmapCount; i++)
+            {
+                struct
+                {
+                    size = MipmapSizes[i];
+                    u8 Data[size];
+                } Mipmap;
+            }
+        } TextureData;
+    }
+    else
+    {
+        u8 TextureData[DataSize];
+    }
 } TNutTexture <optimize=false>;
 
 #ifndef XFBIN

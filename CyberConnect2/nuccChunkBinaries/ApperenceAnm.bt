@@ -1,0 +1,81 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+local int Pos;
+local int i;
+enum <int> ToogleIndex
+        {
+            ApperenceDisable = 0,
+            ApperenceEnable = 1, 
+        };
+enum <int> bitflag
+        {
+            ApperenceNone = 0,
+            ApperenceNormal  = 1, 
+            ApperenceAwakening   = 2, 
+            ApperenceNormalAndAwakening  = 3, 
+        };
+
+
+uint Size;
+LittleEndian();
+uint version;
+uint Count;
+int64 padding;
+local int j;
+for (i = 0; i < Count; i++)
+	{
+    struct
+    {
+       
+            int characode;
+            int unk;
+            uint64 MeshMaterialNameOffset;
+            Pos = FTell();
+            FSeek(Pos + MeshMaterialNameOffset - 8);
+            string MeshMaterialName;
+            FSeek(Pos);
+            
+            ToogleIndex MeshTougle;
+            ToogleIndex NormalState;
+            int AwakeningSceneTiming;
+            bitflag AwakeningState;
+            int ReverseAfterAwakeningState;
+            ToogleIndex SPSKILL_CUTIN_NC;
+            ToogleIndex Ougi;
+            float unk9;
+            float unk10;
+            ToogleIndex Material;
+            float MaterialUV;
+            ToogleIndex WinScreen;
+            ToogleIndex Bone;
+            float BoneVisibility;
+            int unk16;
+            ToogleIndex ArmorBreak;
+            
+            struct
+            {
+                for (j = 0; j < 20; j++)
+		            {
+                        ToogleIndex CostumeIndex;
+                    }
+            }
+            CostumeEntries<read = CostumeIndex, optimize = false>;
+        
+    }
+    ApperrenceAnmEntries<read = characode, optimize = false>;
+}
+}
+ApperenceAnm <optimize = false>;

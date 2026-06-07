@@ -1,0 +1,59 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+
+local int Pos;
+
+
+struct{
+uint64 CustomizeOffset <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + CustomizeOffset);
+string voiceString;
+FSeek(Pos);
+
+uint64 Index;
+
+uint64 Offset0 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset0);
+string CharacterCode;
+FSeek(Pos);
+
+uint64 UnlockCondition;
+
+uint64 Offset1 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset1);
+string VoiceString;
+FSeek(Pos);
+
+uint64 Offset2 <hidden = true>;
+Pos = FTell();
+FSeek(Pos - 8 + Offset2);
+string CharacterString;
+FSeek(Pos);
+
+uint64 Cost;
+}Voice[Count] <optimize= false, read = voiceString>;
+}
+voiceParam <optimize = false>;

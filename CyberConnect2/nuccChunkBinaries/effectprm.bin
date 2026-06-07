@@ -1,0 +1,26 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Count;
+
+struct{
+uint Index;
+uint Type;
+char EffectPath[64];
+char EffectName[64];
+
+}Effect[Count] <read= EffectName>;

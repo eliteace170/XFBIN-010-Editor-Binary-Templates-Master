@@ -1,0 +1,33 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkAnm.bt
+//   Authors: TheLeonX, Hydra
+//   Version: 1.0
+//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//   1.0 - Initial release
+//------------------------------------------------
+
+#include "/../include.h";
+
+
+typedef struct{
+    u16 ShapeKeyCount;
+    u16 unk;
+    int BaseModelID <read = ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex( this, parentof(parentof(parentof(this))).pageStart)])>;
+    float BaseValue;
+    local int i;
+    struct{
+        for (i = 0; i<ShapeKeyCount; i++){
+            struct{
+                int ShapeKeyID <read = ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex( this, parentof(parentof(parentof(parentof(parentof(this))))).pageStart)])>;
+                float ShapeKeyValue;
+            }ShapeKey;
+        }   
+    }ShapeKeys;
+    
+}TNuccMorphModel;

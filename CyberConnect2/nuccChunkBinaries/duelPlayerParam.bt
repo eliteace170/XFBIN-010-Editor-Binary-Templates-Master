@@ -1,0 +1,111 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: characterSelectParam
+//   Authors: Hydra
+//   Version: 1.0
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+struct{
+    string MotionCode;
+    FSkip(7 - Strlen(MotionCode));
+    struct{
+        struct{
+        char costume_name[8];
+        }costumes[20]<optimize=false, read= Str("%s" + "bod1",costume_name)>;
+    }base_costumes;
+    struct{
+        struct{
+        char costume_name[8];
+        }costumes[20]<optimize=false, read= Str("%s" + "bod1",costume_name)>;
+    }awake_costumes;
+    char partner[8];
+    struct{
+        ubyte ChakraDashCondition;
+        ubyte AwakeningCondition1; //some other conditions
+        ubyte AwakeningCondition2; //giant awakenings, ground effects, hitmarks, big chakra effect and etc
+        ubyte AwakeningJutsuName;
+    }conditions;
+    FSkip(12);
+    struct{
+
+        int unk;
+    }flag_settings[17];
+    struct{
+        struct{
+        char characode[8];
+        }support[2]<optimize=false>;
+    }supports;
+    struct{
+        struct{
+            int16 cameraDistance;
+            int16 unk1; //doesnt work
+            int16 VictoryGameAngle;
+            int16 unk2;
+            int16 unk3;
+            int16 unk4;
+        }WinSettings;
+        struct{
+            float MovementSpeed;
+            float ChakraDashSpeed;
+            float GuardPressure;
+            float AirDashSpeed;
+            float Attack;
+            float Defense;
+            float AssistDamage;
+            float ItemBuffDuration;
+            float ChakraChargeSpeed;
+            char AwakeningCondition[16];
+            float AwakeHPRequirement;
+            int16 NinjaDashSpeed;
+            int16 AirDashDuration;
+            int16 GroundedChakraDashDuration;
+            int16 unk1;
+            float unk2;
+        }base_settings;
+        struct{
+            char ItemCode[0x1E];
+            int16 Amount_CD;
+        
+        }items[4];
+        struct{
+            float MovementSpeed;
+            float ChakraDashSpeed;
+            int16 NinjaDashSpeed;
+            int16 AirDashDuration;
+            int16 GroundedChakraDashDuration;
+            int16 unk1;
+            float unk2;
+            float unk3;
+            float unk4;
+            float unk5;
+            float unk6;
+            float unk7;
+            float unk8;
+            float unk9;
+            float unk10;
+            float unk11;
+            int unk12;
+            int unk13;
+            int AwakeningDebuffEnabler;
+            int unk14;
+            float unk15;
+            float unk16;
+            float AwakeningActionChargeSpeed;
+        }awake_settings;
+    }settings;
+}DPP_Entry <optimize=false, read= Str("%s" + "prm_bas",MotionCode)>;
+}
+duelPlayerParam <optimize = false>;

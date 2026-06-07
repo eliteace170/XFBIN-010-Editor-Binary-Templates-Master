@@ -1,0 +1,49 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+
+struct{
+uint64 offset0 ;
+Pos = FTell();
+FSeek(Pos + offset0 - 8);
+string MusicString;
+FSeek(Pos);
+
+
+uint64 offset0 ;
+Pos = FTell();
+FSeek(Pos + offset0 - 8);
+string MusicID;
+FSeek(Pos);
+
+uint Index;
+uint Cost;
+uint unk1;
+uint unk2;
+uint unk3;
+uint unk4;
+uint unk5;
+uint unk6;
+}Music[Count] <optimize= false>;
+}
+musicParam <optimize = false>;

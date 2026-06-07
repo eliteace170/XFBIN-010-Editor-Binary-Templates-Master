@@ -1,203 +1,300 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
-//   Authors: SutandoTsukai181
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
-//  Category: 
-// File Mask: 
-//  ID Bytes: 
-//   History: 
+//      File: nuccChunkParticle.bt
+//   Authors: SutandoTsukai181, TheLeonX, Hydra
+//   Version: 1.1
+//   Purpose: Parse CC2 nuccChunkParticle data
+//   History:
 //   1.0 - Initial release
+//   1.1 - Names/layout updated from Blender-XFBIN-Importer br_particle.py
 //------------------------------------------------
 
 #include "/../include.h";
 
+#ifndef XFBIN_CHUNK_INDEX_READERS
+#define XFBIN_CHUNK_INDEX_READERS
+string ReadTXfbinChunkIndexU32(u32& value, u32 pageStart)
+{
+    local string str;
+    if (exists(Xfbin) && pageStart + value < Xfbin.ChunkTable.ChunkMapIndicesCount)
+    {
+        return ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(value, pageStart)]);
+    }
+    SPrintf(str, "ChunkIndex[%u]", value);
+    return str;
+}
+
+string ReadTXfbinChunkIndexS32(s32& value, u32 pageStart)
+{
+    local string str;
+    if (value < 0)
+    {
+        SPrintf(str, "ChunkIndex[%d]", value);
+        return str;
+    }
+    if (exists(Xfbin) && pageStart + value < Xfbin.ChunkTable.ChunkMapIndicesCount)
+    {
+        return ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(value, pageStart)]);
+    }
+    SPrintf(str, "ChunkIndex[%d]", value);
+    return str;
+}
+#endif
+
+enum <u8> TParticleBool
+{
+    False = 0,
+    True = 1
+};
+
+enum <u8> TParticleSpawnType
+{
+    SpawnAtBone = 0,
+    RandomSpawnXZ = 1,
+    RandomSpawnXYZ = 2
+};
+
+enum <u8> TParticleType
+{
+    DefaultParticleType = 0,
+    Invert_AddRandomScale = 1,
+    UnknownParticleType1 = 2,
+    UnknownParticleType2 = 3,
+    KillParticleAtTheEnd = 4,
+    UnknownParticleType3 = 5,
+    UnknownParticleType4 = 6,
+    UnknownParticleType5 = 7,
+    UnknownParticleType6 = 8,
+    UnknownParticleType7 = 9,
+    UnknownParticleType8 = 10,
+    UnknownParticleType9 = 11,
+    UnknownParticleType10 = 12,
+    UnknownParticleType11 = 13,
+    UnknownParticleType12 = 14,
+    UnknownParticleType13 = 15,
+    UnknownParticleType14 = 16,
+    UnknownParticleType15 = 17,
+    UnknownParticleType16 = 18,
+    UnknownParticleType17 = 19,
+    UnknownParticleType18 = 20,
+    UnknownParticleType19 = 21,
+    UnknownParticleType20 = 22,
+    UnknownParticleType21 = 23
+};
+
+enum <u8> TParticleRandomRoll
+{
+    DisabledRandomRotation = 0,
+    RandomTrackballRotation = 1,
+    UnknownRoll1 = 2,
+    RandomRotation = 3
+};
+
+enum <u32> TParticleEffectChunkType
+{
+    EffectClump = 1,
+    EffectAnm = 2,
+    EffectBillboard = 5
+};
+
 typedef struct
 {
-    if (parentof(this).Version != 0x79 && parentof(this).Version != 0x7A & parentof(this).Version != 0x7B)
+    u32 Position;
+    u16 EntryCount;
+    u16 EntrySize;
+} TParticleHeader;
+
+typedef struct
+{
+    f32 R;
+    f32 G;
+    f32 B;
+    f32 A;
+
+    local int bgcolor_particle = (R * 0xFF) + (G * 0xFF) * 0x100 + (B * 0xFF) * 0x10000;
+} TParticleColor <bgcolor=bgcolor_particle>;
+
+typedef struct
+{
+    u16 Raw;
+    local float Value = (float)Raw / 0xFFFF;
+} TParticleU16Norm <read=ReadTParticleU16Norm>;
+
+string ReadTParticleU16Norm(TParticleU16Norm& value)
+{
+    local string str;
+    SPrintf(str, "%.6f", value.Value);
+    return str;
+}
+
+typedef struct
+{
+    u32 AnimationChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 EntryIndex;
+    u32 Field08;
+    u32 Field0C;
+
+    enum TParticleBool StretchParticles;
+    enum TParticleSpawnType AttachmentType;
+    u8 VelocityType;
+    enum TParticleBool AttachToBone;
+    enum TParticleRandomRoll RandomRollType;
+    u8 FrameRate;
+    u8 Field16;
+    enum TParticleType ParticleType;
+    u8 Field18;
+    u8 Field19;
+    u8 Field1A;
+    u8 Gravity;
+    s16 FrameEnd;
+    u16 Field1E;
+
+    f32 ParticleCount;
+    f32 SpawnRadiusStart;
+    f32 SpawnRadiusEnd;
+    u16 Lifetime;
+    u16 Field2E;
+    f32 LifetimeRandomness;
+    f32 Velocity;
+    f32 ObjectAlignedVelocity;
+
+    f32 RandomRotationStart;
+    f32 RandomRotationMiddle;
+    f32 RandomRotationEnd;
+    f32 RandomRotationFactor;
+
+    f32 AlphaStart;
+    f32 AlphaMiddle;
+    f32 AlphaEnd;
+    f32 AlphaFactor;
+
+    f32 ScaleXStart;
+    f32 ScaleYStart;
+    f32 ScaleZStart;
+    f32 AddRandomScaleXStart;
+    f32 AddRandomScaleYStart;
+    f32 AddRandomScaleZStart;
+    f32 ScaleXMiddle;
+    f32 ScaleYMiddle;
+    f32 ScaleZMiddle;
+    f32 ScaleXEnd;
+    f32 ScaleYEnd;
+    f32 ScaleZEnd;
+    f32 ScaleFactor;
+
+    struct TParticleColor ColorStart;
+    struct TParticleColor ColorMiddle;
+    struct TParticleColor ColorEnd;
+    f32 ColorFactor;
+
+    f32 Field9C;
+    f32 FieldA0;
+    f32 FieldA4;
+} TParticleManager <optimize=false>;
+
+typedef struct
+{
+    u32 EffectChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 ParticleEntryIndex;
+    s32 Field08;
+    s32 Field0C;
+    struct TParticleU16Norm Field10;
+    struct TParticleU16Norm Field12;
+    struct TParticleU16Norm Field14;
+    struct TParticleU16Norm Field16;
+    struct TParticleU16Norm Field18;
+    struct TParticleU16Norm Field1A;
+    enum TParticleEffectChunkType EffectChunkType;
+} TParticleResource <optimize=false>;
+
+typedef struct
+{
+    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 ParticleEntryIndex;
+    s32 Field08;
+    s32 Field0C;
+    s32 Field10;
+    f32 Field14;
+    f32 Field18;
+    s32 Field1C;
+    s32 Field20;
+    s32 Field24;
+    s32 Field28;
+    s32 Field2C;
+    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 Field34;
+} TParticlePosition <optimize=false>;
+
+typedef struct
+{
+    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 ParticleEntryIndex;
+    s32 Field08;
+    s32 Field0C;
+    s32 Field10;
+    f32 Field14;
+    f32 Field18;
+    s32 Field1C;
+    s32 Field20;
+    s32 Field24;
+    s32 Field28;
+    s32 Field2C;
+    u16 Field30;
+    u16 Field32;
+    s32 Field34;
+    f32 Field38;
+    s32 Field3C;
+    f32 Field40;
+    f32 Field44;
+    f16 Field48;
+    f16 Field4A;
+    f16 Field4C;
+    f16 Field4E;
+    f32 Field50;
+    f32 ParticleSpeed;
+    f32 Field58;
+    f32 Field5C;
+    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    s32 Field64;
+    s32 Field68;
+    s32 Field6C;
+} TParticleForceField <optimize=false>;
+
+typedef struct
+{
+    u16 Flag;
+    u16 FrameRaw;
+    local float Frame = (float)FrameRaw / 0x21;
+} TParticleFrame <read=ReadTParticleFrame>;
+
+string ReadTParticleFrame(TParticleFrame& value)
+{
+    local string str;
+    SPrintf(str, "%s %.2f", value.Flag ? "ENABLED" : "DISABLED", value.Frame);
+    return str;
+}
+
+typedef struct
+{
+    u32 FrameCount;
+    struct TParticleFrame Frames[FrameCount] <optimize=false>;
+    FSkip((4 + (FrameCount * 4)) % 8);
+} TParticleNode <optimize=false>;
+
+typedef struct
+{
+    if (parentof(this).Version != 0x79 && parentof(this).Version != 0x7A && parentof(this).Version != 0x7B)
     {
-        u8 Data[parentof(this).Size] <comment = "Particle template works only with 0x79 Chunk version">;
+        u8 Data[parentof(this).Size] <comment="Particle template supports chunk versions 0x79, 0x7A, 0x7B">;
     }
     else
     {
-
-        struct{
-            u32 Position; //Was never used
-            u16 EntryCount;
-            u16 EntrySize; 
-        }ParticleHeaders[5];
-        struct{
-            struct{
-                local int l;
-                for (l = 0; l < ParticleHeaders[0].EntryCount; l++){
-                    struct{
-                        u32 ChunkMapID_Animation;
-                        u32 EntryID;
-                        FSkip(0x08);
-                        u8 StretchLoop; //00 = Stretching particles during animation, 01 = blowing all particles at once
-                        u8 AttachmentType; //Not sure exactly for what it was used, but if unsure, use 0x00
-                        u8 BlowoutDisabler; //No idea how I can call, it but blowout value stopped working when i used higher value (0x05 for example)
-                        u8 AttachToBone; //0 = False, 1 = True
-                        u8 RandomRoll; //0 = False, 1 = True, 2 = Same as False???
-                        u8 FrameRate; // Not sure tbh, smaller value = slower animation. Default value is 30, so i assumed it was related to frame rate
-                        u8 unk1; 
-                        u8 unk2; //It was "EntryType" before, idk why it was called like that
-                        FSkip(0x2);
-                        u8 unkFlag;
-                        u8 StartTime;
-                        int16 EndTime; //0xFFFF will be endless for animation
-                        u16 unk;
-                        f32 ParticleCount;
-                        f32 SpawnRadiusStart;
-                        f32 SpawnRadiusEnd;
-                        u16 FadeTime;
-                        FSkip(0x2);
-                        f32 FadeTime2; //It's almost same as regular FadeTime, but slightly different. Usually just 0 or 1
-                        f32 Blowout; //Can be used even with AttachToBone, but it will be shaky. I don't recommend to use it with AttachToBone enabled
-                        struct{
-                            f32 Rotation_W;
-                            f32 Rotation_X;
-                            f32 Rotation_Y;
-                            f32 Rotation_Z;
-                        }RotationWXYZ;
-                        f32 unk3; 
-                        f32 Transparency;
-                        f32 unk4; //Could be related to Transparency, but no idea
-                        f32 unk5; //Could be related to Transparency, but no idea
-                        f32 unk6; //Could be related to Transparency as blend value, but no idea
-                        struct{
-                            struct{
-                                f32 Scale_X;
-                                f32 Scale_Y;
-                                f32 Scale_Z;
-                            }AnimationScale[3];
-                            struct{
-                                f32 Scale_X;
-                                f32 Scale_Y;
-                                f32 Scale_Z;
-                            }DefaultScale;
-                        }ParticleScale;
-                        f32 BlendScaleValue; //less value will blend scale mainly with 1st and 2nd scales, bigger value will blend scale mainly with 2nd and 3rd scales
-                        struct{
-                            local int l;
-                            for (l = 0; l < 3; l++){
-                                struct{
-                                    float R_channel;
-                                    float G_channel;
-                                    float B_channel;
-                                    float A_channel;
-                                    
-                                    local int bgcolor_particle = (R_channel * 0xFF) + (G_channel * 0xFF) * 0x100 + (B_channel * 0xFF) * 0x10000;
-                                }AnimationColor <bgcolor=bgcolor_particle>;
-                            }
-                            
-                        }ParticleColor; //GradientColor
-                        float BlendColorValue; //less value will blend color mainly with 2nd and 3rd colors, bigger value will blend color mainly with 1st and 2nd colors
-                        FSkip(0x0C); //did nothing at all
-                    }ParticleSettings;
-                }
-            }ParticleSetting;
-            struct{
-                local int j;
-                for (j = 0; j<ParticleHeaders[1].EntryCount; j++)
-                {
-                    struct{
-                        u32 ChunkMapID_Effect;
-                        u32 ParticleEntryID;
-                        FSkip(0x08);
-                        //s16 unk1; 
-                        //s16 unk2;
-                        struct TVector2Short unk1 <optimize=false>;
-                        struct TVector2Short unk2 <optimize=false>;
-                        struct TVector2Short unk3 <optimize=false>;
-                        u32 ChunkMap_Type;  // 01 = nuccChunkClump, 02 = nuccChunkAnm, 05 = nuccChunkBillboard
-                        
-                        local string chunkType = "";
-                        switch ( ChunkMap_Type )
-                        {
-                            case 1:
-                                chunkType = "nuccChunkClump";
-                                break;
-                            case 2:
-                                chunkType = "nuccChunkAnm";
-                                break;
-                            case 5:
-                                chunkType = "nuccChunkBillboard";
-                                break;
-                        }
-                    }ParticleMaterialEntry <comment=chunkType>;
-                }
-            }ParticleMaterial;
-            
-            
-            struct{
-                u32 ChunkMapID_Coord;
-                u32 ParticleEntryID;
-                u32 unk1;
-                u32 unk2;
-                u32 unk3;
-                float unk4;
-                float unk5;
-                u32 unk6;
-                u32 unk7;
-                u32 unk8;
-                u32 unk9;
-                u32 unk10;
-                u32 ChunkMapID_Clump;
-                u32 unk12;
-                        
-            }ParticleBones[ParticleHeaders[2].EntryCount];
-    
-            struct{
-                byte Data[0x70];
-                        
-            }Particle4thHeader[ParticleHeaders[3].EntryCount];
-            
-            struct{
-                local int j;
-                local int x;
-                local int entry_size = 4;
-                for (j = 0; j<ParticleHeaders[4].EntryCount; j++)
-                {
-                    entry_size = 0;
-                    struct{
-                        int TimeEntryCount;
-                        for (x = 0; x < TimeEntryCount; x++){
-    
-                            struct{
-                                u16 ParticleEnabler;
-                                u16 Timing;
-                                local string isEnabled = "???";
-                                if (ParticleEnabler != 0){
-                                    isEnabled = "ENABLED";
-                                }
-                                else{
-                                    isEnabled = "DISABLED";
-                                }
-                            }TimeEntry <comment=isEnabled>;
-                            entry_size = entry_size + 4;
-                        }
-                       
-                        FSkip((4 + (TimeEntryCount * 4)) % 8);
-                    }TimeEntries;
-                }
-            }ParticleTimelines;
-        }ParticleHeaderEntries;
+        struct TParticleHeader ParticleHeaders[5];
+        struct TParticleManager ParticleManagers[ParticleHeaders[0].EntryCount] <optimize=false>;
+        struct TParticleResource ParticleResources[ParticleHeaders[1].EntryCount] <optimize=false>;
+        struct TParticlePosition ParticlePositions[ParticleHeaders[2].EntryCount] <optimize=false>;
+        struct TParticleForceField ParticleForceFields[ParticleHeaders[3].EntryCount] <optimize=false>;
+        struct TParticleNode ParticleNodes[ParticleHeaders[4].EntryCount] <optimize=false>;
     }
 } TNuccParticle;
-typedef struct
-{
-    s16 value1;
-    s16 value2;
-} TVector2Short <read=ReadTVector2Short>;
-
-string ReadTVector2Short(TVector2Short& value)
-{
-    local string str;
-    SPrintf(str, "[%.6f, %.6f]",
-        (float)value.value1 / 0x1000,
-        (float)value.value2 / 0x1000);
-    return str;
-}

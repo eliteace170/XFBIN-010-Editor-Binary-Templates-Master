@@ -1,0 +1,32 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+uint Version;
+uint Count;
+FSkip(8);
+local int Pos;
+local int count = 0;
+
+struct{
+    int CharaCodeIndex;
+    int Skill1Index;
+    int Skill2Index;
+}skill[Count] <optimize = false, read = Str("%d, %d, %d", CharaCodeIndex, index2, index3)>;
+}
+SkillIndexParam <optimize = false>;

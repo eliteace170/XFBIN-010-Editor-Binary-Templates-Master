@@ -1,0 +1,49 @@
+//------------------------------------------------
+//--- 010 Editor v13.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+typedef struct
+{
+BigEndian();
+uint FileSize;
+
+LittleEndian();
+
+int Version;
+uint Count;
+uint64 FirstPointer <hidden= true>;
+
+local int Pos;
+
+struct{
+uint64 CustomizeOffset <hidden = false>;
+Pos = FTell();
+FSeek(Pos - 8 + CustomizeOffset);
+string CustomizeString;
+FSeek(Pos);
+
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+uint unk;
+}Customize[Count] <optimize = false, read = CustomizeString>;
+}
+itemCustomizeParam <optimize = false>;
