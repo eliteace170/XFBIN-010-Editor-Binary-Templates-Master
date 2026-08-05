@@ -1,0 +1,147 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: cpuActionParam.bin
+//   Authors:
+//   Version: 3
+//   Purpose: Parse named CPU action parameter records
+//  Category: Game
+// File Mask: cpuActionParam.bin
+//  ID Bytes:
+//   History: v3 - added runtime action-object and action-number context
+//            v2 - documented header, entries, and relative string table
+//------------------------------------------------
+
+// The payload size at offset 0 is big-endian. All remaining values are
+// little-endian. Name offsets are relative to the address of the offset
+// field, not to the beginning of the file or entry.
+
+local uint64 gCpuActionStringTableStart = 0;
+local uint64 gCpuActionPayloadEnd = 0;
+
+typedef struct
+{
+    local uint64 OffsetFieldPosition = FTell();
+    uint64 RelativeOffset;
+
+    local uint64 StringPosition = 0;
+    local string ResolvedString = "";
+
+    Assert(RelativeOffset != 0);
+
+    StringPosition = OffsetFieldPosition + RelativeOffset;
+    Assert(StringPosition >= gCpuActionStringTableStart);
+    Assert(StringPosition < gCpuActionPayloadEnd);
+
+    local uint64 ReturnPosition = FTell();
+    FSeek(StringPosition);
+    string Value;
+    ResolvedString = Value;
+    FSeek(ReturnPosition);
+}
+TCpuActionRelativeName <read=ReadCpuActionRelativeName, optimize=false>;
+
+string ReadCpuActionRelativeName(TCpuActionRelativeName &value)
+{
+    return value.ResolvedString;
+}
+
+typedef struct
+{
+    TCpuActionRelativeName Name;
+
+    // The loader resolves Name to a runtime action object. Its fields at
+    // +0x08 through +0x18 match the first five integers below. The Cheat
+    // Engine table tentatively labels the +0x14 field (UnknownValue3 here) as
+    // action-probability-weight-related; that meaning is not confirmed.
+    //
+    // UnknownValue0: 0-2; usually 1 or 2
+    // UnknownValue1: usually 0; otherwise multiples of 100 up to 1300
+    // UnknownValue2: 0-2500
+    // UnknownValue3: 150-8000; possible probability weight (runtime-table
+    //                author also marked this interpretation with '?')
+    // UnknownValue2 < UnknownValue3 in 534 of 536 newest-sample records.
+    // UnknownValue4: 0-4
+    // UnknownValue5: 0-2
+    int32 UnknownValue0;
+    int32 UnknownValue1;
+    int32 UnknownValue2;
+    int32 UnknownValue3;
+    int32 UnknownValue4;
+    int32 UnknownValue5;
+
+    // These four fields form one packed, sentinel-terminated list. Observed
+    // non-sentinel values are 0, 1, 3, 11, 12, 18, and 19, matching the
+    // ActionNumber domain targeted by cpu_script SetProb/AddProb. They are
+    // therefore probably action-number/category tags, not generic parameters.
+    // 9999 means unused/end-of-list; all later elements are also 9999.
+    int32 ActionNumberTags[4];
+}
+TCpuActionEntry <read=ReadCpuActionEntry, optimize=false>;
+
+string ReadCpuActionEntry(TCpuActionEntry &value)
+{
+    local string description = "";
+    SPrintf(description,
+        "%s [values %d/%d/%d, weight? %d, action tags %d/%d/%d/%d]",
+        value.Name.ResolvedString,
+        value.UnknownValue0, value.UnknownValue1, value.UnknownValue2,
+        value.UnknownValue3,
+        value.ActionNumberTags[0], value.ActionNumberTags[1],
+        value.ActionNumberTags[2], value.ActionNumberTags[3]);
+    return description;
+}
+
+typedef struct
+{
+    string Value;
+}
+TCpuActionStringTableEntry <read=ReadCpuActionStringTableEntry, optimize=false>;
+
+string ReadCpuActionStringTableEntry(TCpuActionStringTableEntry &value)
+{
+    return value.Value;
+}
+
+typedef struct
+{
+    local uint64 BinaryStart = FTell();
+
+    BigEndian();
+    uint32 PayloadSize;
+    LittleEndian();
+
+    uint32 FormatVersion;
+    uint32 EntryCount;
+    uint32 PointerSize;
+    uint32 Reserved;
+
+    gCpuActionPayloadEnd = BinaryStart + 4 + PayloadSize;
+
+    Assert(gCpuActionPayloadEnd <= FileSize());
+    Assert(FormatVersion == 1000);
+    Assert(PointerSize == 8);
+    Assert(Reserved == 0);
+
+    local uint64 EntryTableStart = FTell();
+    local uint64 EntrySize = 48;
+    gCpuActionStringTableStart = EntryTableStart + EntryCount * EntrySize;
+
+    Assert(gCpuActionStringTableStart <= gCpuActionPayloadEnd);
+
+    TCpuActionEntry Entries[EntryCount];
+
+    Assert(FTell() == gCpuActionStringTableStart);
+
+    struct
+    {
+        while (FTell() < gCpuActionPayloadEnd)
+        {
+            TCpuActionStringTableEntry Names;
+        }
+    }
+    StringTable <optimize=false>;
+
+    Assert(FTell() == gCpuActionPayloadEnd);
+}
+cpuActionParam <optimize=false>;

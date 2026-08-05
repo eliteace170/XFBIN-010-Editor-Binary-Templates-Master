@@ -1,0 +1,192 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: cpu_script.bin
+//   Authors:
+//   Version: 3
+//   Purpose: Parse grouped CPU script instructions
+//  Category: Game
+// File Mask: cpu_script.bin
+//  ID Bytes:
+//   History: v3 - added runtime control/command names from cpuparam.CT
+//            v2 - corrected grouped 36-byte instruction layout
+//------------------------------------------------
+
+// The payload size at offset 0 is big-endian. All remaining fields are
+// little-endian. The value following the size controls the number of group
+// counts in the header; each count describes one consecutive record group.
+
+// Runtime ccSimpleScriptDataBin stores the same 36-byte record layout. The
+// Type controls program flow; CommandNumber selects the predicate or command.
+typedef enum <uint16>
+{
+    CpuScriptCtrlIf            = 0,
+    CpuScriptNextProcessIf     = 1,
+    CpuScriptSkip2             = 2,
+    CpuScriptCtrlSwitch        = 3,
+    CpuScriptNextProcessSwitch = 4,
+    CpuScriptSkip5             = 5,
+    CpuScriptCtrlJump          = 6,
+    CpuScriptSkip7             = 7,
+    CpuScriptEnd               = 8,
+    CpuScriptCtrlCommand       = 9,
+    CpuScriptUnknown10         = 10
+}
+ECpuScriptType;
+
+typedef enum <uint16>
+{
+    CpuCommandSetProb        = 0,
+    CpuCommandAddProb        = 1,
+    CpuCommandJudgeGauge     = 2,
+    CpuCommandJudgeSituation = 3,
+    CpuCommandJudgeDistance  = 4,
+    CpuCommandSetParam       = 5,
+    CpuCommandJudgeAction    = 6,
+    CpuCommandNone           = 65535
+}
+ECpuScriptCommand;
+
+typedef struct
+{
+    // Types 0-9 come from the runtime table. Types 2, 5, and 7 are labeled
+    // SKIP/deprecated there. Type 10 occurs in the binaries but is absent from
+    // that table, so its role remains unknown.
+    ECpuScriptType Type;
+    ECpuScriptCommand CommandNumber;
+
+    // Command-dependent arguments:
+    //   SetProb:       [0] ActionNumber, [1] new probability
+    //   AddProb:       [0] ActionNumber, [1] signed probability delta
+    //   SetParam:      [0] ParameterNumber, [1] value
+    //   Judge*:        predicate operands; exact positions remain uncertain
+    // Unused argument positions are normally -1.
+    int32 Arguments[8];
+}
+TCpuScriptInstruction <read=ReadCpuScriptInstruction, optimize=false>;
+
+string ReadCpuScriptInstruction(TCpuScriptInstruction &value)
+{
+    local string description = "";
+
+    if (value.Type == CpuScriptCtrlCommand
+        && value.CommandNumber == CpuCommandSetProb)
+    {
+        SPrintf(description, "SetProb: action %d = %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if (value.Type == CpuScriptCtrlCommand
+        && value.CommandNumber == CpuCommandAddProb)
+    {
+        SPrintf(description, "AddProb: action %d += %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if (value.Type == CpuScriptCtrlCommand
+        && value.CommandNumber == CpuCommandSetParam)
+    {
+        SPrintf(description, "SetParam: parameter %d = %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if (value.Type == CpuScriptCtrlIf
+        && value.CommandNumber == CpuCommandJudgeGauge)
+    {
+        SPrintf(description, "IF JudgeGauge: %d, %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if (value.Type == CpuScriptCtrlIf
+        && value.CommandNumber == CpuCommandJudgeAction)
+    {
+        SPrintf(description, "IF JudgeAction: %d, %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if ((value.Type == CpuScriptCtrlSwitch
+            || value.Type == CpuScriptNextProcessSwitch)
+        && value.CommandNumber == CpuCommandJudgeDistance)
+    {
+        SPrintf(description, "JudgeDistance switch: %d, %d",
+            value.Arguments[0], value.Arguments[1]);
+        return description;
+    }
+
+    if (value.CommandNumber == CpuCommandNone)
+    {
+        SPrintf(description, "Control marker: type %u", value.Type);
+        return description;
+    }
+
+    SPrintf(description,
+        "type %u, command %u, args [%d, %d, %d, %d, %d, %d, %d, %d]",
+        value.Type, value.CommandNumber,
+        value.Arguments[0], value.Arguments[1],
+        value.Arguments[2], value.Arguments[3],
+        value.Arguments[4], value.Arguments[5],
+        value.Arguments[6], value.Arguments[7]);
+    return description;
+}
+
+typedef struct(uint32 recordCount, uint32 groupIndex)
+{
+    local uint32 GroupIndex = groupIndex;
+    local uint32 RecordCount = recordCount;
+    TCpuScriptInstruction Instructions[recordCount];
+}
+TCpuScriptGroup <read=ReadCpuScriptGroup, optimize=false>;
+
+string ReadCpuScriptGroup(TCpuScriptGroup &value)
+{
+    local string description = "";
+    SPrintf(description, "Group %u (%u instructions)", value.GroupIndex,
+        value.RecordCount);
+    return description;
+}
+
+typedef struct
+{
+    local uint64 BinaryStart = FTell();
+
+    BigEndian();
+    uint32 PayloadSize;
+    LittleEndian();
+
+    uint32 GroupCount;
+    uint32 GroupRecordCounts[GroupCount];
+
+    local uint64 PayloadEnd = BinaryStart + 4 + PayloadSize;
+    Assert(PayloadEnd <= FileSize());
+    Assert(GroupCount > 0);
+
+    local uint32 TotalRecordCount = 0;
+    local uint32 i;
+
+    for (i = 0; i < GroupCount; i++)
+        TotalRecordCount += GroupRecordCounts[i];
+
+    local uint64 RecordTableStart = FTell();
+    local uint64 InstructionSize = 36;
+    local uint64 ExpectedPayloadEnd = RecordTableStart
+        + TotalRecordCount * InstructionSize;
+
+    Assert(ExpectedPayloadEnd == PayloadEnd);
+
+    struct
+    {
+        for (i = 0; i < GroupCount; i++)
+        {
+            TCpuScriptGroup Group(GroupRecordCounts[i], i);
+        }
+    }
+    Groups <optimize=false>;
+
+    Assert(FTell() == PayloadEnd);
+}
+cpu_script <optimize=false>;

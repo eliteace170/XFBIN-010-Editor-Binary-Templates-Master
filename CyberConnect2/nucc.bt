@@ -37,6 +37,28 @@ typedef struct
     u32 ReferenceSize;
 } TNuccPage;
 
+typedef struct(u32 pageStart)
+{
+    local u32 PageStart = pageStart;
+    u32 Index;
+} TXfbinChunkIndexU32 <optimize=false, read=ReadTXfbinChunkIndexU32Struct>;
+
+typedef struct(u32 pageStart)
+{
+    local u32 PageStart = pageStart;
+    s32 Index;
+} TXfbinChunkIndexS32 <optimize=false, read=ReadTXfbinChunkIndexS32Struct>;
+
+string ReadTXfbinChunkIndexU32Struct(TXfbinChunkIndexU32& value)
+{
+    return ReadTXfbinChunkIndexU32(value.Index, value.PageStart);
+}
+
+string ReadTXfbinChunkIndexS32Struct(TXfbinChunkIndexS32& value)
+{
+    return ReadTXfbinChunkIndexS32(value.Index, value.PageStart);
+}
+
 typedef struct
 {
     u16 Field00;
@@ -63,13 +85,14 @@ typedef struct
     u16 RiggingFlag;
 
     u16 Attributes;
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
 
     if ( parentof(this).Version > 0x73 && parentof(this).Version < 0x76 )
     {
         u16 Padding0;
-        u32 ClumpIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
-        u32 HitIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
-        u32 MeshBoneIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
+        u32 ClumpIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+        u32 HitIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+        u32 MeshBoneIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
         u32 NudSize;
         u16 LightCategoryFlag;
         u8 RenderLayer;
@@ -81,9 +104,9 @@ typedef struct
         u8 LightModeID;
         if ( parentof(this).Version > 0x73 )
             u32 LightCategoryFlag;
-        u32 ClumpIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
-        u32 HitIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
-        u32 MeshBoneIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
+        u32 ClumpIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+        u32 HitIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+        u32 MeshBoneIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
         u32 NudSize;
     }
 
@@ -103,7 +126,7 @@ typedef struct
     #endif
 
     u16 MaterialCount;
-    u32 MaterialIndices[MaterialCount] <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(this)).pageStart)>;
+    struct TXfbinChunkIndexU32 MaterialIndices(PageStartForRead)[MaterialCount];
 } TNuccModel;
 
 typedef struct
@@ -128,6 +151,7 @@ typedef struct
     u8 Field03;
     f32 Glare;
     u32 Flags;
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
 
     struct
     {
@@ -153,7 +177,7 @@ typedef struct
             u16 Field22;
             u32 Field24;
     
-            u32 TextureChunkIndices[TextureCount] <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+            struct TXfbinChunkIndexU32 TextureChunkIndices(PageStartForRead)[TextureCount];
     
             if ( exists( Xfbin ) )
             {
@@ -164,7 +188,7 @@ typedef struct
                         for ( j = 0; j < TextureCount; j++ )
                         {
                             FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
-                                TextureChunkIndices[j],
+                                TextureChunkIndices[j].Index,
                                 parentof(parentof(parentof(parentof(this)))).pageStart
                             )] ) );
                             struct TChunkMap ChunkMap;
@@ -181,6 +205,7 @@ typedef struct
 {
     u16 SpringGroupsCount;
     u16 CollisionSpheresCount;
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
 
     u32 ClumpChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
 
@@ -258,6 +283,7 @@ if ( parentof(this).Version != 0x79 && parentof(this).Version != 0x7A )
 }
 else
 {
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
 
     u32 Field00; // Not always 0
 
@@ -270,7 +296,7 @@ else
     }
 
     s16 CoordNodeParents[CoordCount];
-    u32 CoordNodeIndices[CoordCount] <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+    struct TXfbinChunkIndexU32 CoordNodeIndices(PageStartForRead)[CoordCount];
 
     // This only lists the parents, not the node whose parent is listed
     local int i;
@@ -281,7 +307,7 @@ else
         {
             FPush();
             {
-                currentIndex = CoordNodeParents[i] < 0 ? 0 : CoordNodeIndices[CoordNodeParents[i]];
+                currentIndex = CoordNodeParents[i] < 0 ? 0 : CoordNodeIndices[CoordNodeParents[i]].Index;
                 FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
                     i,
                     parentof(parentof(parentof(this))).pageStart
@@ -299,7 +325,7 @@ else
             FPush();
             {
                 FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
-                    CoordNodeIndices[i],
+                    CoordNodeIndices[i].Index,
                     parentof(parentof(parentof(this))).pageStart
                 )] ) );
                 struct TChunkMap ChunkMap;
@@ -322,13 +348,14 @@ else
 typedef struct
 {
     s16 Count;
+    local u32 PageStartForRead = parentof(parentof(parentof(this))).pageStart;
 
     if ( Count != -1 && (FTell() - startof(parentof(this))) < parentof(parentof(this)).Size )
     {
         u8 Flags[2];
 
         f32 LodDistance;
-        s32 Indices[Count] <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+        struct TXfbinChunkIndexS32 Indices(PageStartForRead)[Count];
 
         struct
         {
@@ -337,7 +364,7 @@ typedef struct
             {
                 FPush();
                 {
-                    currentIndex = Indices[i] < 0 ? 0 : Indices[i];
+                    currentIndex = Indices[i].Index < 0 ? 0 : Indices[i].Index;
                     FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
                         currentIndex,
                         parentof(parentof(parentof(parentof(this)))).pageStart

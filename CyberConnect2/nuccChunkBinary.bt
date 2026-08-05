@@ -29,6 +29,10 @@
 #include "nuccChunkBinaries/costumeBreakColorParam.bt"
 #include "nuccChunkBinaries/costumeBreakParam.bt"
 #include "nuccChunkBinaries/costumeParam.bt"
+#include "nuccChunkBinaries/cpuActionParam.bt"
+#include "nuccChunkBinaries/cpuPlayerParam.bt"
+#include "nuccChunkBinaries/cpu_script.bt"
+#include "nuccChunkBinaries/cpu_strength.bt"
 #include "nuccChunkBinaries/damageeff.bin.bt"
 #include "nuccChunkBinaries/DictionaryCharacterParam.bt"
 #include "nuccChunkBinaries/DlcInfoParam.bt"
@@ -112,6 +116,22 @@ typedef struct
                 break;
             case ("costumeParam"):
                 struct costumeParam costumeParamData;
+                break;
+            case ("cpuActionParam"):
+            case ("cpuActionParam.bin"):
+                struct cpuActionParam CpuActionData;
+                break;
+            case ("cpuPlayerParam"):
+            case ("cpuPlayerParam.bin"):
+                struct cpuPlayerParam CpuPlayerData;
+                break;
+            case ("cpu_script"):
+            case ("cpu_script.bin"):
+                struct cpu_script CpuScriptData;
+                break;
+            case ("cpu_strength"):
+            case ("cpu_strength.bin"):
+                struct cpu_strength CpuStrengthData;
                 break;
             case ("damageeff.bin"):
                 struct damageeff_bin DamageEffectData;

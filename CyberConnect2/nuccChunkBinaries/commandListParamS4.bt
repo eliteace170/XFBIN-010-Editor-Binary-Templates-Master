@@ -1,0 +1,86 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+BigEndian();
+uint Size;
+LittleEndian();
+uint version;
+uint Count;
+int64 padding;
+local int Pos;
+local int i;
+for (i = 0; i < Count; i++)
+{
+    struct
+    {
+        uint32 cmd_link; // this is "<characode>_command_{i:03}" example: 3irk_command_009 which is converts to 71039A21 in hex using crc32 hash 
+        int32 CommandListIndex; //each index starts with 0 which means "<characode>_command_{i:03}"
+        uint32 characterName; //crc32 hash from messageInfo.bin
+        uint32 characode; //crc32 hash characode.bin
+        int32 costumeIndex;
+        uint32 AttackName; //crc32 hash from messageInfo.bin
+        uint32 ButtonPress;//crc32 hash from messageInfo.bin
+        int32 CommandType1;
+        int32 CommandTypeSkill;
+        int32 CommandTypeAwake;
+        int32 CommandTypeTeam;
+        int32 CommandType5;
+        int32 CommandType6;
+    }
+    commandListParamEntries;
+}
+
+/*   
+0x1C[CommandType1]
+if MenuType = CommandList
+   0 = ret1
+   1 = ret1
+   2 = ret1
+1000 = ret1
+if MenuType = ComboList
+   0 = ret1
+1000 = ret1
+
+0x20[CommandTypeSkill]
+   0 = ret1
+   1 = ret IsEnableUseAction(SKILL)
+   2 = ret IsEnableUseAction(SPSKILL)
+   3 = ret IsEnableUseAction(SKILL_REINFORCE)
+   4 = ret NOT singles team && IsEnableUseAction(TEAMSKILL)
+   5 = ret1 if NOT singles team
+   6 = ret1 if singles team
+ >=7 = ret1
+
+0x24[CommandTypeAwake]
+if MenuType = CommandList
+   0 = ret1 if NOT Awake
+   1 = ret1 if True Awake
+   2 = ret1
+   3 = ret0
+ >=4 = ret1
+if MenuType = ComboList
+   0 = ret1 if NOT Awake || Instant Awake
+   1 = ret1 if True Awake
+   2 = ret1
+   3 = ret0
+ >=4 = ret1
+ 
+0x28[CommandTypeTeam]
+   0 = ret1
+   1 = ret1 if IsSingleTeam
+ >=2 = ret1 if NOT IsSingleTeam
+ >=3 = ret1
+ 
+0x2C[CommandType5]
+  -1 = ret1
+2000 = ret1
+*/

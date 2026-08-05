@@ -1,0 +1,199 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: cpuPlayerParam.bin
+//   Authors:
+//   Version: 3
+//   Purpose: Parse CPU player-to-action parameter mappings
+//  Category: Game
+// File Mask: cpuPlayerParam.bin
+//  ID Bytes:
+//   History: v3 - named runtime-confirmed skill/CAP slots
+//            v2 - corrected the mixed pointer/scalar entry layout
+//------------------------------------------------
+
+// The payload size at offset 0 is big-endian. All remaining values are
+// little-endian. String offsets are relative to the address of the offset
+// field, not to the beginning of the file or entry.
+
+local uint64 gCpuPlayerStringTableStart = 0;
+local uint64 gCpuPlayerPayloadEnd = 0;
+
+typedef struct
+{
+    local uint64 OffsetFieldPosition = FTell();
+    uint64 RelativeOffset;
+
+    local uint64 StringPosition = 0;
+    local string ResolvedString = "";
+
+    if (RelativeOffset != 0)
+    {
+        StringPosition = OffsetFieldPosition + RelativeOffset;
+
+        // Known files point forward from the entry table into the trailing
+        // null-terminated string table.
+        Assert(StringPosition >= gCpuPlayerStringTableStart);
+        Assert(StringPosition < gCpuPlayerPayloadEnd);
+
+        local uint64 ReturnPosition = FTell();
+        FSeek(StringPosition);
+        string Value;
+        ResolvedString = Value;
+        FSeek(ReturnPosition);
+    }
+}
+TCpuPlayerRelativeString <read=ReadCpuPlayerRelativeString, optimize=false>;
+
+string ReadCpuPlayerRelativeString(TCpuPlayerRelativeString &value)
+{
+    if (value.RelativeOffset == 0)
+        return "<null>";
+
+    return value.ResolvedString;
+}
+
+typedef enum <int32>
+{
+    CpuPlayerTypeNormal         = 0,
+    CpuPlayerTypeDash           = 1,
+    CpuPlayerTypeProjectile     = 2,
+    CpuPlayerTypePuppet         = 7
+}
+ECpuPlayerType;
+
+string ReadCpuPlayerType(ECpuPlayerType value)
+{
+    switch (value)
+    {
+        case CpuPlayerTypeNormal:     return "Normal";
+        case CpuPlayerTypeDash:       return "Dash";
+        case CpuPlayerTypeProjectile: return "Projectile Type";
+        case CpuPlayerTypePuppet:     return "Puppet Type";
+        default:
+        {
+            local string unknownType = "";
+            SPrintf(unknownType, "Unknown Type (%d)", value);
+            return unknownType;
+        }
+    }
+}
+
+typedef struct
+{
+    // Called Character ID by the runtime table; stored as characode on disk.
+    int32 CharacterId;
+    ECpuPlayerType Type;
+
+    // These CAP_* names are resolved into direct action-object pointers by the
+    // loader. Names through SpecialSkill4 come from the runtime table.
+    TCpuPlayerRelativeString Skill1;                    // file cell 00
+    TCpuPlayerRelativeString Skill1Air;                 // file cell 01
+    TCpuPlayerRelativeString Skill1Reinforce;           // file cell 02
+    TCpuPlayerRelativeString Skill2;                    // file cell 03
+    TCpuPlayerRelativeString Skill2Air;                 // file cell 04
+    TCpuPlayerRelativeString Skill2Reinforce;           // file cell 05
+    TCpuPlayerRelativeString Skill3;                    // file cell 06
+    TCpuPlayerRelativeString Skill3Air;                 // file cell 07
+    TCpuPlayerRelativeString Skill3Reinforce;           // file cell 08
+    TCpuPlayerRelativeString Skill4;                    // file cell 09
+    TCpuPlayerRelativeString Skill4Air;                 // file cell 10
+    TCpuPlayerRelativeString Skill4Reinforce;           // file cell 11
+    TCpuPlayerRelativeString SpecialSkill1;             // file cell 12
+    TCpuPlayerRelativeString SpecialSkill2;             // file cell 13
+    TCpuPlayerRelativeString SpecialSkill3;             // file cell 14
+    TCpuPlayerRelativeString SpecialSkill4;             // file cell 15
+    TCpuPlayerRelativeString StrengthRelatedActionMaybe;// file cell 16, tentative
+    TCpuPlayerRelativeString UnknownActionSlot17;        // file cell 17
+
+    // This eight-byte scalar cell is probably converted to the runtime pointer
+    // at player-entry +0x10. It likely selects a cpu_script group, but the exact
+    // meaning of the 0/1 flag is not confirmed.
+    // Observed indices: 0, 1, 2, 4, 5, 6, 7. Flag is always 0 or 1.
+    uint32 ScriptGroupIndexA;
+    uint32 ScriptGroupFlagA;
+
+    TCpuPlayerRelativeString UnknownActionSlot19;        // file cell 19
+    TCpuPlayerRelativeString AwakeningSkill;             // file cell 20
+    TCpuPlayerRelativeString AwakeningSkillAir;          // file cell 21
+    TCpuPlayerRelativeString AwakeningSkillReinforce;    // file cell 22
+    TCpuPlayerRelativeString UnknownActionSlot23;        // file cell 23
+
+    // Probable second cpu_script group selector, converted to the runtime
+    // pointer at player-entry +0x18.
+    // Observed indices: 0, 1, 2, 4, 5, 6, 7. Flag is always 0 or 1.
+    uint32 ScriptGroupIndexB;
+    uint32 ScriptGroupFlagB;
+
+    TCpuPlayerRelativeString UnknownActionSlot25;        // file cell 25
+    TCpuPlayerRelativeString UnknownActionSlot26;        // file cell 26
+    TCpuPlayerRelativeString UnknownActionSlot27;        // file cell 27
+    TCpuPlayerRelativeString UnknownActionSlot28;        // file cell 28
+    TCpuPlayerRelativeString UnknownActionSlot29;        // file cell 29
+    TCpuPlayerRelativeString UnknownActionSlot30;        // file cell 30
+    TCpuPlayerRelativeString UnknownActionSlot31;        // file cell 31
+}
+TCpuPlayerEntry <read=ReadCpuPlayerEntry, optimize=false>;
+
+string ReadCpuPlayerEntry(TCpuPlayerEntry &value)
+{
+    local string description = "";
+    SPrintf(description, "character %d, %s, script groups %u/%u",
+        value.CharacterId, ReadCpuPlayerType(value.Type),
+        value.ScriptGroupIndexA, value.ScriptGroupIndexB);
+    return description;
+}
+
+typedef struct
+{
+    string Value;
+}
+TCpuPlayerStringTableEntry <read=ReadCpuPlayerStringTableEntry, optimize=false>;
+
+string ReadCpuPlayerStringTableEntry(TCpuPlayerStringTableEntry &value)
+{
+    return value.Value;
+}
+
+typedef struct
+{
+    local uint64 BinaryStart = FTell();
+
+    BigEndian();
+    uint32 PayloadSize;
+    LittleEndian();
+
+    uint32 FormatVersion;
+    uint32 EntryCount;
+    uint32 PointerSize;
+    uint32 Reserved;
+
+    gCpuPlayerPayloadEnd = BinaryStart + 4 + PayloadSize;
+
+    Assert(gCpuPlayerPayloadEnd <= FileSize());
+    Assert(FormatVersion == 1000);
+    Assert(PointerSize == 8);
+    Assert(Reserved == 0);
+
+    local uint64 EntryTableStart = FTell();
+    local uint64 EntrySize = 264;
+    gCpuPlayerStringTableStart = EntryTableStart + EntryCount * EntrySize;
+
+    Assert(gCpuPlayerStringTableStart <= gCpuPlayerPayloadEnd);
+
+    TCpuPlayerEntry Entries[EntryCount];
+
+    Assert(FTell() == gCpuPlayerStringTableStart);
+
+    struct
+    {
+        while (FTell() < gCpuPlayerPayloadEnd)
+        {
+            TCpuPlayerStringTableEntry Names;
+        }
+    }
+    StringTable <optimize=false>;
+
+    Assert(FTell() == gCpuPlayerPayloadEnd);
+}
+cpuPlayerParam <optimize=false>;

@@ -1,0 +1,144 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+BigEndian();
+uint Size;
+LittleEndian();
+uint version;
+uint Count;
+int64 padding;
+local int Pos;
+local int i;
+for (i = 0; i < Count; i++)
+{
+    struct
+    {
+        uint64 CommandLink_Offest;
+		if (CommandLink_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + CommandLink_Offest - 8);
+			    string CommandLinkName;
+			    FSeek(Pos);
+		    }
+        int32 CommandListIndex; //each index starts with 0 which means "<characode>_command_{i:03}"
+        int32 unk1; //each index starts with 0 which means "<characode>_command_{i:03}"
+        uint64 CharacterName_Offest;
+		if (CharacterName_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + CharacterName_Offest - 8);
+			    string CharacterName;
+			    FSeek(Pos);
+		    }
+        uint64 Characode_Offest;
+		if (Characode_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + Characode_Offest - 8);
+			    string Characode;
+			    FSeek(Pos);
+		    }
+        int32 costumeIndex;
+        int32 unk2;
+        uint64 AttackName_Offest;
+		if (AttackName_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + AttackName_Offest - 8);
+			    string AttackName;
+			    FSeek(Pos);
+		    }
+        uint64 ButtonPress_Offest;
+		if (ButtonPress_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + ButtonPress_Offest - 8);
+			    string ButtonPress;
+			    FSeek(Pos);
+		    }
+        uint64 ButtonPressNotes_Offest;
+		if (ButtonPressNotes_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + ButtonPressNotes_Offest - 8);
+			    string ButtonPressNotes;
+			    FSeek(Pos);
+		    }
+        uint64 ButtonPressNotes2_Offest;
+		if (ButtonPressNotes2_Offest > 0)
+		    {
+			    Pos = FTell();
+			    FSeek(Pos + ButtonPressNotes2_Offest - 8);
+			    string ButtonPressNotes2;
+			    FSeek(Pos);
+		    }
+        int32 CommandType1;
+        int32 CommandTypeSkill;
+        int32 CommandTypeAwake;
+        int32 CommandTypeTeam;
+        int32 CommandType5;
+        int32 CommandType6;
+        int32 unk3;
+        int32 unk4;
+        
+        
+    }
+    commandListParamEntries<read = CommandLinkName, optimize = false>;
+}
+
+/*   
+0x1C[CommandType1]
+if MenuType = CommandList
+   0 = ret1
+   1 = ret1
+   2 = ret1
+1000 = ret1
+if MenuType = ComboList
+   0 = ret1
+1000 = ret1
+
+0x20[CommandTypeSkill]
+   0 = ret1
+   1 = ret IsEnableUseAction(SKILL)
+   2 = ret IsEnableUseAction(SPSKILL)
+   3 = ret IsEnableUseAction(SKILL_REINFORCE)
+   4 = ret NOT singles team && IsEnableUseAction(TEAMSKILL)
+   5 = ret1 if NOT singles team
+   6 = ret1 if singles team
+ >=7 = ret1
+
+0x24[CommandTypeAwake]
+if MenuType = CommandList
+   0 = ret1 if NOT Awake
+   1 = ret1 if True Awake
+   2 = ret1
+   3 = ret0
+ >=4 = ret1
+if MenuType = ComboList
+   0 = ret1 if NOT Awake || Instant Awake
+   1 = ret1 if True Awake
+   2 = ret1
+   3 = ret0
+ >=4 = ret1
+ 
+0x28[CommandTypeTeam]
+   0 = ret1
+   1 = ret1 if IsSingleTeam
+ >=2 = ret1 if NOT IsSingleTeam
+ >=3 = ret1
+ 
+0x2C[CommandType5]
+  -1 = ret1
+2000 = ret1
+*/

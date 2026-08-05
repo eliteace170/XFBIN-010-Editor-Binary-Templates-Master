@@ -1,0 +1,132 @@
+//------------------------------------------------
+//--- 010 Editor v15.0 Binary Template
+//
+//      File: cpu_strength.bin
+//   Authors:
+//   Version: 2
+//   Purpose: Parse grouped CPU strength values
+//  Category: Game
+// File Mask: cpu_strength.bin
+//  ID Bytes:
+//   History: v2 - identified records as Ctrl_COMMAND/SetParam
+//            v1 - initial documented 36-byte record layout
+//------------------------------------------------
+
+// The payload size at offset 0 is big-endian. All remaining fields are
+// little-endian. The supplied file has 11 groups (0-10), with 20 indexed
+// strength values in each group.
+
+typedef enum <uint16>
+{
+    CpuStrengthCtrlIf            = 0,
+    CpuStrengthNextProcessIf     = 1,
+    CpuStrengthSkip2             = 2,
+    CpuStrengthCtrlSwitch        = 3,
+    CpuStrengthNextProcessSwitch = 4,
+    CpuStrengthSkip5             = 5,
+    CpuStrengthCtrlJump          = 6,
+    CpuStrengthSkip7             = 7,
+    CpuStrengthEnd               = 8,
+    CpuStrengthCtrlCommand       = 9,
+    CpuStrengthUnknown10         = 10
+}
+ECpuStrengthScriptType;
+
+typedef enum <uint16>
+{
+    CpuStrengthCommandSetProb        = 0,
+    CpuStrengthCommandAddProb        = 1,
+    CpuStrengthCommandJudgeGauge     = 2,
+    CpuStrengthCommandJudgeSituation = 3,
+    CpuStrengthCommandJudgeDistance  = 4,
+    CpuStrengthCommandSetParam       = 5,
+    CpuStrengthCommandJudgeAction    = 6,
+    CpuStrengthCommandNone           = 65535
+}
+ECpuStrengthScriptCommand;
+
+typedef struct
+{
+    // Every supplied strength record is Type 9 (Ctrl_COMMAND), Command 5
+    // (SetParam). The game loads this through ccSimpleScriptDataBin, just like
+    // cpu_script.
+    ECpuStrengthScriptType Type;
+    ECpuStrengthScriptCommand CommandNumber;
+
+    // ParameterNumber runs from 0 through 19 within every supplied group.
+    // The same numeric domain is used by cpu_script SetProb/AddProb targets
+    // and the probable action-number tags in cpuActionParam.
+    int32 ParameterNumber;
+    // Observed range is 0-100. Values form difficulty-dependent curves.
+    int32 Value;
+
+    // These are the remaining VM argument positions. All six are -1 in the
+    // supplied current and old strength files.
+    int32 UnusedArguments[6];
+}
+TCpuStrengthEntry <read=ReadCpuStrengthEntry, optimize=false>;
+
+string ReadCpuStrengthEntry(TCpuStrengthEntry &value)
+{
+    local string description = "";
+    SPrintf(description, "SetParam: parameter %d = %d", value.ParameterNumber,
+        value.Value);
+    return description;
+}
+
+typedef struct(uint32 recordCount, uint32 groupIndex)
+{
+    local uint32 StrengthLevel = groupIndex;
+    local uint32 RecordCount = recordCount;
+    TCpuStrengthEntry Entries[recordCount];
+}
+TCpuStrengthGroup <read=ReadCpuStrengthGroup, optimize=false>;
+
+string ReadCpuStrengthGroup(TCpuStrengthGroup &value)
+{
+    local string description = "";
+    SPrintf(description, "Strength level %u (%u entries)",
+        value.StrengthLevel, value.RecordCount);
+    return description;
+}
+
+typedef struct
+{
+    local uint64 BinaryStart = FTell();
+
+    BigEndian();
+    uint32 PayloadSize;
+    LittleEndian();
+
+    uint32 GroupCount;
+    uint32 GroupRecordCounts[GroupCount];
+
+    local uint64 PayloadEnd = BinaryStart + 4 + PayloadSize;
+    Assert(PayloadEnd <= FileSize());
+    Assert(GroupCount > 0);
+
+    local uint32 TotalRecordCount = 0;
+    local uint32 i;
+
+    for (i = 0; i < GroupCount; i++)
+        TotalRecordCount += GroupRecordCounts[i];
+
+    local uint64 RecordTableStart = FTell();
+    local uint64 EntrySize = 36;
+    local uint64 ExpectedPayloadEnd = RecordTableStart
+        + TotalRecordCount * EntrySize;
+
+    Assert(ExpectedPayloadEnd == PayloadEnd);
+
+    struct
+    {
+        for (i = 0; i < GroupCount; i++)
+        {
+            TCpuStrengthGroup Group(GroupRecordCounts[i], i);
+        }
+    }
+    StrengthGroups <optimize=false>;
+
+    Assert(FTell() == PayloadEnd);
+}
+cpu_strength <optimize=false>;
