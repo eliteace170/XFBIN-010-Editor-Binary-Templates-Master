@@ -1,13 +1,14 @@
 //------------------------------------------------
-//--- 010 Editor v10.0.2 Binary Template
+//--- 010 Editor v15.0 Binary Template
 //
 //      File: nuccChunkParticle.bt
 //   Authors: SutandoTsukai181, TheLeonX, Hydra
-//   Version: 1.1
+//   Version: 2.0
 //   Purpose: Parse CC2 nuccChunkParticle data
 //   History:
 //   1.0 - Initial release
 //   1.1 - Names/layout updated from Blender-XFBIN-Importer br_particle.py
+//   2.0 - Layout updated from Storm 4 and Connections 1.70 executables
 //------------------------------------------------
 
 #include "/../include.h";
@@ -42,68 +43,62 @@ string ReadTXfbinChunkIndexS32(s32& value, u32 pageStart)
 }
 #endif
 
-enum <u8> TParticleBool
+enum <u32> TParticleResourceType
 {
-    False = 0,
-    True = 1
+    ParticleResourceClump = 1,
+    ParticleResourceAnm = 2,
+    ParticleResourceSprite = 3,
+    ParticleResourceSprite2 = 4,
+    ParticleResourceBillboard = 5
 };
 
 enum <u8> TParticleSpawnType
 {
-    SpawnAtBone = 0,
-    RandomSpawnXZ = 1,
-    RandomSpawnXYZ = 2
+    ParticleSpawnPoint = 0,
+    ParticleSpawnPlanarCircle = 1,
+    ParticleSpawnSphere = 2,
+    ParticleSpawnTubeRandomEnd = 3,
+    ParticleSpawnTubeForward = 4,
+    ParticleSpawnTubeReverse = 5
 };
 
-enum <u8> TParticleType
+enum <u8> TParticleDirectionType
 {
-    DefaultParticleType = 0,
-    Invert_AddRandomScale = 1,
-    UnknownParticleType1 = 2,
-    UnknownParticleType2 = 3,
-    KillParticleAtTheEnd = 4,
-    UnknownParticleType3 = 5,
-    UnknownParticleType4 = 6,
-    UnknownParticleType5 = 7,
-    UnknownParticleType6 = 8,
-    UnknownParticleType7 = 9,
-    UnknownParticleType8 = 10,
-    UnknownParticleType9 = 11,
-    UnknownParticleType10 = 12,
-    UnknownParticleType11 = 13,
-    UnknownParticleType12 = 14,
-    UnknownParticleType13 = 15,
-    UnknownParticleType14 = 16,
-    UnknownParticleType15 = 17,
-    UnknownParticleType16 = 18,
-    UnknownParticleType17 = 19,
-    UnknownParticleType18 = 20,
-    UnknownParticleType19 = 21,
-    UnknownParticleType20 = 22,
-    UnknownParticleType21 = 23
+    ParticleDirectionOutward = 0,
+    ParticleDirectionInward = 1,
+    ParticleDirectionRandomXYZ = 2,
+    ParticleDirectionLocalCone = 3
 };
 
-enum <u8> TParticleRandomRoll
+enum <u8> TParticleRotationType
 {
-    DisabledRandomRotation = 0,
-    RandomTrackballRotation = 1,
-    UnknownRoll1 = 2,
-    RandomRotation = 3
+    ParticleRotationZero = 0,
+    ParticleRotationRandomXYZ = 1,
+    ParticleRotationAxisAligned = 2,
+    ParticleRotationAxisRandomY = 3
 };
 
-enum <u32> TParticleEffectChunkType
+string ReadTParticleNormalizedU16(u16& value)
 {
-    EffectClump = 1,
-    EffectAnm = 2,
-    EffectBillboard = 5
-};
+    local string str;
+    SPrintf(str, "%.6f", (float)value / 0xFFFF);
+    return str;
+}
 
-typedef struct
+string ReadTParticleTimelineValue(u32& value)
 {
-    u32 Position;
-    u16 EntryCount;
-    u16 EntrySize;
-} TParticleHeader;
+    local string str;
+    local u32 timeMS = value & 0x7FFFFFFF;
+    if ((value & 0x80000000) != 0)
+    {
+        SPrintf(str, "ENABLED - %u ms (30 FPS frame %u)", timeMS, timeMS / 33);
+    }
+    else
+    {
+        SPrintf(str, "DISABLED - %u ms (30 FPS frame %u)", timeMS, timeMS / 33);
+    }
+    return str;
+}
 
 typedef struct
 {
@@ -112,105 +107,96 @@ typedef struct
     f32 B;
     f32 A;
 
-    local int bgcolor_particle = (R * 0xFF) + (G * 0xFF) * 0x100 + (B * 0xFF) * 0x10000;
+    local int bgcolor_particle =
+        (R * 0xFF) + (G * 0xFF) * 0x100 + (B * 0xFF) * 0x10000;
 } TParticleColor <bgcolor=bgcolor_particle>;
 
 typedef struct
 {
-    u16 Raw;
-    local float Value = (float)Raw / 0xFFFF;
-} TParticleU16Norm <read=ReadTParticleU16Norm>;
+    u32 Position;       // Stored but ignored by the game parser.
+    u16 EntryCount;
+    u16 EntrySize;      // Informational; the game uses version-specific sizes.
+} TParticleHeader;
 
-string ReadTParticleU16Norm(TParticleU16Norm& value)
+typedef struct(u32 currentPageStart)
 {
-    local string str;
-    SPrintf(str, "%.6f", value.Value);
-    return str;
-}
+    local u32 pageStart = currentPageStart;
 
-typedef struct
-{
-    u32 AnimationChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    u32 AnimationChunkIndex
+        <read=ReadTXfbinChunkIndexU32(this, parentof(this).pageStart)>;
     u32 EntryIndex;
-    u32 Field08;
-    u32 Field0C;
+    u8 Reserved08[8];
 
-    enum TParticleBool StretchParticles;
-    enum TParticleSpawnType AttachmentType;
-    u8 VelocityType;
-    enum TParticleBool AttachToBone;
-    enum TParticleRandomRoll RandomRollType;
-    u8 FrameRate;
-    u8 Field16;
-    enum TParticleType ParticleType;
-    u8 Field18;
-    u8 Field19;
-    u8 Field1A;
-    u8 Gravity;
-    s16 FrameEnd;
-    u16 Field1E;
+    // nuccParticleGenParam begins at record offset 0x10.
+    u8 AllocationMode;
+    enum TParticleSpawnType SpawnType;
+    enum TParticleDirectionType DirectionType;
+    u8 ParticleInstanceMode;
+    enum TParticleRotationType RotationType;
+    u8 ControlRate;
+    u8 GeneratorFlags;       // bit 0: independent random XYZ scale
+                             // bit 4: position-node path adjustment
+    u8 ParticleBehaviorType;
+    u8 ParticleInstanceFlags[4];
+    s16 GeneratorEndTime;    // -1 = endless
+    u16 ExtendedDataFlags;   // low byte enables the v0x7B extension
 
-    f32 ParticleCount;
-    f32 SpawnRadiusStart;
-    f32 SpawnRadiusEnd;
+    f32 ParticleCountOrRate;
+    f32 SpawnRadius;
+    f32 SpawnRadiusRandomness;
     u16 Lifetime;
-    u16 Field2E;
+    u16 Reserved2E;
     f32 LifetimeRandomness;
-    f32 Velocity;
-    f32 ObjectAlignedVelocity;
+    f32 InitialSpeed;
+    f32 InitialSpeedRandomness;
+    f32 EmissionAngle1;
+    f32 EmissionAngle2;
+    f32 EmissionAngle1Randomness;
+    f32 EmissionAngle2Randomness;
+    f32 FadeParameter1;
+    f32 FadeParameter2;
+    f32 InitialRotation;
+    f32 InitialRotationRandomness;
 
-    f32 RandomRotationStart;
-    f32 RandomRotationMiddle;
-    f32 RandomRotationEnd;
-    f32 RandomRotationFactor;
+    struct TVector3 StartScale;
+    struct TVector3 RandomScale;
+    struct TVector3 MiddleScale;
+    struct TVector3 EndScale;
+    f32 ScaleInterpolationPoint;
 
-    f32 AlphaStart;
-    f32 AlphaMiddle;
-    f32 AlphaEnd;
-    f32 AlphaFactor;
-
-    f32 ScaleXStart;
-    f32 ScaleYStart;
-    f32 ScaleZStart;
-    f32 AddRandomScaleXStart;
-    f32 AddRandomScaleYStart;
-    f32 AddRandomScaleZStart;
-    f32 ScaleXMiddle;
-    f32 ScaleYMiddle;
-    f32 ScaleZMiddle;
-    f32 ScaleXEnd;
-    f32 ScaleYEnd;
-    f32 ScaleZEnd;
-    f32 ScaleFactor;
-
-    struct TParticleColor ColorStart;
-    struct TParticleColor ColorMiddle;
-    struct TParticleColor ColorEnd;
-    f32 ColorFactor;
-
-    f32 Field9C;
-    f32 FieldA0;
-    f32 FieldA4;
+    struct TParticleColor StartColor;
+    struct TParticleColor MiddleColor;
+    struct TParticleColor EndColor;
+    f32 ColorInterpolationPoint;
+    u32 FieldC4;
+    u32 FieldC8;
+    u32 FieldCC;
 } TParticleManager <optimize=false>;
 
-typedef struct
+typedef struct(u32 currentPageStart)
 {
-    u32 EffectChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    local u32 pageStart = currentPageStart;
+
+    u32 EffectChunkIndex
+        <read=ReadTXfbinChunkIndexU32(this, parentof(this).pageStart)>;
     u32 ParticleEntryIndex;
-    s32 Field08;
-    s32 Field0C;
-    struct TParticleU16Norm Field10;
-    struct TParticleU16Norm Field12;
-    struct TParticleU16Norm Field14;
-    struct TParticleU16Norm Field16;
-    struct TParticleU16Norm Field18;
-    struct TParticleU16Norm Field1A;
-    enum TParticleEffectChunkType EffectChunkType;
+    u8 Reserved08[8];
+    u16 Parameter0 <read=ReadTParticleNormalizedU16>;
+    u16 Parameter1 <read=ReadTParticleNormalizedU16>;
+    u16 Parameter2 <read=ReadTParticleNormalizedU16>;
+    u16 Parameter3 <read=ReadTParticleNormalizedU16>;
+    u16 Parameter4 <read=ReadTParticleNormalizedU16>;
+    u16 Parameter5 <read=ReadTParticleNormalizedU16>;
+    enum TParticleResourceType ResourceType;
 } TParticleResource <optimize=false>;
 
-typedef struct
+typedef struct(u32 currentPageStart, u16 currentChunkVersion)
 {
-    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    local u32 pageStart = currentPageStart;
+    local u16 chunkVersion = currentChunkVersion;
+
+    s32 CoordChunkIndex
+        <read=ReadTXfbinChunkIndexS32(this, parentof(this).pageStart)>;
     u32 ParticleEntryIndex;
     s32 Field08;
     s32 Field0C;
@@ -222,13 +208,23 @@ typedef struct
     s32 Field24;
     s32 Field28;
     s32 Field2C;
-    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
-    u32 Field34;
+
+    // Position records are 0x30 bytes through v0x77 and 0x38 afterward.
+    if (chunkVersion > 0x77)
+    {
+        s32 ClumpChunkIndex
+            <read=ReadTXfbinChunkIndexS32(this, parentof(this).pageStart)>;
+        u32 Field34;
+    }
 } TParticlePosition <optimize=false>;
 
-typedef struct
+typedef struct(u32 currentPageStart, u16 currentChunkVersion)
 {
-    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+    local u32 pageStart = currentPageStart;
+    local u16 chunkVersion = currentChunkVersion;
+
+    s32 CoordChunkIndex
+        <read=ReadTXfbinChunkIndexS32(this, parentof(this).pageStart)>;
     u32 ParticleEntryIndex;
     s32 Field08;
     s32 Field0C;
@@ -255,46 +251,85 @@ typedef struct
     f32 ParticleSpeed;
     f32 Field58;
     f32 Field5C;
-    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
-    s32 Field64;
-    s32 Field68;
-    s32 Field6C;
+
+    // Force-field records are 0x60 bytes through v0x77 and 0x70 afterward.
+    if (chunkVersion > 0x77)
+    {
+        s32 ClumpChunkIndex
+            <read=ReadTXfbinChunkIndexS32(this, parentof(this).pageStart)>;
+        s32 Field64;
+        s32 Field68;
+        s32 Field6C;
+    }
 } TParticleForceField <optimize=false>;
 
 typedef struct
 {
-    u16 Flag;
-    u16 FrameRaw;
-    local float Frame = (float)FrameRaw / 0x21;
-} TParticleFrame <read=ReadTParticleFrame>;
-
-string ReadTParticleFrame(TParticleFrame& value)
-{
-    local string str;
-    SPrintf(str, "%s %.2f", value.Flag ? "ENABLED" : "DISABLED", value.Frame);
-    return str;
-}
+    u32 ValueCount;
+    u32 Values[ValueCount] <read=ReadTParticleTimelineValue, optimize=false>;
+    if (((4 + ValueCount * 4) % 8) != 0)
+    {
+        u8 Alignment[4];
+    }
+} TParticleTimeline <optimize=false>;
 
 typedef struct
 {
-    u32 FrameCount;
-    struct TParticleFrame Frames[FrameCount] <optimize=false>;
-    FSkip((4 + (FrameCount * 4)) % 8);
-} TParticleNode <optimize=false>;
+    local int i;
+    local int HasExtendedParticleData = 0;
+    local u32 pageStart = parentof(parentof(this)).pageStart;
+    local u16 chunkVersion = parentof(this).Version;
 
-typedef struct
-{
-    if (parentof(this).Version != 0x79 && parentof(this).Version != 0x7A && parentof(this).Version != 0x7B)
+    struct TParticleHeader ParticleHeaders[5];
+
+    struct
     {
-        u8 Data[parentof(this).Size] <comment="Particle template supports chunk versions 0x79, 0x7A, 0x7B">;
-    }
-    else
+        for (i = 0; i < ParticleHeaders[0].EntryCount; i++)
+        {
+            struct TParticleManager ParticleManager(pageStart);
+            if ((ParticleManager.ExtendedDataFlags & 0x00FF) != 0)
+            {
+                HasExtendedParticleData = 1;
+            }
+        }
+    } ParticleManagers <optimize=false>;
+
+    struct
     {
-        struct TParticleHeader ParticleHeaders[5];
-        struct TParticleManager ParticleManagers[ParticleHeaders[0].EntryCount] <optimize=false>;
-        struct TParticleResource ParticleResources[ParticleHeaders[1].EntryCount] <optimize=false>;
-        struct TParticlePosition ParticlePositions[ParticleHeaders[2].EntryCount] <optimize=false>;
-        struct TParticleForceField ParticleForceFields[ParticleHeaders[3].EntryCount] <optimize=false>;
-        struct TParticleNode ParticleNodes[ParticleHeaders[4].EntryCount] <optimize=false>;
+        for (i = 0; i < ParticleHeaders[1].EntryCount; i++)
+        {
+            struct TParticleResource ParticleResource(pageStart);
+        }
+    } ParticleResources <optimize=false>;
+
+    struct
+    {
+        for (i = 0; i < ParticleHeaders[2].EntryCount; i++)
+        {
+            struct TParticlePosition ParticlePosition(pageStart, chunkVersion);
+        }
+    } ParticlePositions <optimize=false>;
+
+    struct
+    {
+        for (i = 0; i < ParticleHeaders[3].EntryCount; i++)
+        {
+            struct TParticleForceField ParticleForceField(pageStart, chunkVersion);
+        }
+    } ParticleForceFields <optimize=false>;
+
+    struct
+    {
+        for (i = 0; i < ParticleHeaders[4].EntryCount; i++)
+        {
+            struct TParticleTimeline ParticleTimeline;
+        }
+    } ParticleTimelines <optimize=false>;
+
+    // Connections v0x7B reads this only when a manager enables the flag.
+    if (chunkVersion >= 0x7B && HasExtendedParticleData != 0)
+    {
+        u64 ExtendedDataSize;
+        u8 ExtendedData[ExtendedDataSize];
     }
-} TNuccParticle;
+} TNuccParticle <optimize=false>;

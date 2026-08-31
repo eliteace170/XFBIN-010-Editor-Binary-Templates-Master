@@ -110,8 +110,8 @@ typedef struct
     // at player-entry +0x10. It likely selects a cpu_script group, but the exact
     // meaning of the 0/1 flag is not confirmed.
     // Observed indices: 0, 1, 2, 4, 5, 6, 7. Flag is always 0 or 1.
-    uint32 ScriptGroupIndexA;
-    uint32 ScriptGroupFlagA;
+    uint32 AwakeningScriptType;
+    uint32 AwakeningScriptTypeFlag;
 
     TCpuPlayerRelativeString UnknownActionSlot19;        // file cell 19
     TCpuPlayerRelativeString AwakeningSkill;             // file cell 20
@@ -122,8 +122,8 @@ typedef struct
     // Probable second cpu_script group selector, converted to the runtime
     // pointer at player-entry +0x18.
     // Observed indices: 0, 1, 2, 4, 5, 6, 7. Flag is always 0 or 1.
-    uint32 ScriptGroupIndexB;
-    uint32 ScriptGroupFlagB;
+    uint32 InstantAwakeningScriptType;
+    uint32 InstantAwakeningScriptTypeFlag;
 
     TCpuPlayerRelativeString UnknownActionSlot25;        // file cell 25
     TCpuPlayerRelativeString UnknownActionSlot26;        // file cell 26
