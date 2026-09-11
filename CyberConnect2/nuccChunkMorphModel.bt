@@ -1,10 +1,10 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
+//      File: nuccChunkMorphModel.bt
 //   Authors: TheLeonX, Hydra
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//   Version: 1.1
+//   Purpose: Base model reference and weighted morph target references
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
@@ -14,20 +14,22 @@
 
 #include "/../include.h";
 
-
+// NSUNS3HD_NX 0x71010E4F54 and NSUNS4_107 0x140A79080 agree:
+// 4-byte count header, 8-byte base record, then ShapeKeyCount 8-byte targets.
+// All model IDs go through nuccXfbinParser::GetIndex (page-relative IDs).
 typedef struct{
     u16 ShapeKeyCount;
-    u16 unk;
-    int BaseModelID <read = ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex( this, parentof(parentof(parentof(this))).pageStart)])>;
-    float BaseValue;
+    u16 Field02 <comment="Endian-converted, but not retained by the examined parsers.">;
+    u32 BaseModelID <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart)>;
+    float BaseValue <comment="Serialized base-record value; read and converted but not stored by these parsers.">;
     local int i;
     struct{
         for (i = 0; i<ShapeKeyCount; i++){
             struct{
-                int ShapeKeyID <read = ReadTChunkMap(Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex( this, parentof(parentof(parentof(parentof(parentof(this))))).pageStart)])>;
-                float ShapeKeyValue;
+                u32 ShapeKeyID <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(parentof(this))))).pageStart)>;
+                float ShapeKeyValue <comment="Stored alongside the resolved morph target; existing weight interpretation retained.">;
             }ShapeKey;
         }   
     }ShapeKeys;
     
-}TNuccMorphModel;
+}TNuccMorphModel <optimize=false>;

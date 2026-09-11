@@ -1,0 +1,19 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkPage.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkPage data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    // NX nuccChunkPage::Parse 0x71010E549C -> ChangePage, not byte counts.
+    u32 PageSize <comment="Number of chunk-map index entries consumed by this page; advances the next page's index base.">;
+    u32 ReferenceSize <comment="Number of external-reference table entries consumed by this page.">;
+} TNuccPage;

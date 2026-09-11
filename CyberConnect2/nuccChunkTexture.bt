@@ -1,0 +1,33 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkTexture.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkTexture data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    // NX 0x7101131234 / PC 0x140A74E60 read a 12-byte wrapper, then Size bytes of NUT.
+    u16 Field00 <comment="Only the first byte is copied to the runtime texture flags; full bit meanings are unverified.">;
+    u16 Width;
+    u16 Height;
+    u16 Field06 <comment="Not used by the inspected texture Parse methods; retained verbatim.">;
+
+    u32 Size <comment="Embedded NUT byte size, excluding this 12-byte texture wrapper.">;
+
+    #ifdef NUT
+        FPushBase();
+        {
+            TNut Nut;
+        }
+        FPopBase();
+    #else
+        u8 Data[Size];
+    #endif
+} TNuccTexture;

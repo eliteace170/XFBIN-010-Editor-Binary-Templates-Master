@@ -3,14 +3,20 @@
 //
 //      File: nuccChunkTrail.bt
 //   Authors: SutandoTsukai181, TheLeonX, Hydra
-//   Version: 1.1
+//   Version: 1.6
 //   Purpose: Parse CC2 nuccChunkTrail data
 //   History:
 //   1.0 - Initial release
 //   1.1 - Names/layout updated from Blender-XFBIN-Importer br_trail.py
+//   1.2 - Corrected widths, flags and force fields
+//   1.3 - Compact fields and enum values
+//   1.4 - Clearer field names and brief editing notes
+
 //------------------------------------------------
 
 #include "/../include.h";
+
+
 
 #ifndef XFBIN_CHUNK_INDEX_READERS
 #define XFBIN_CHUNK_INDEX_READERS
@@ -42,17 +48,47 @@ string ReadTXfbinChunkIndexS32(s32& value, u32 pageStart)
 }
 #endif
 
+enum <u16> TTrailFlags
+{
+    NoFade = 0x00,
+    FadeAlpha = 0x01,
+    FadeWidth = 0x02,
+    FadeBoth = 0x03,
+    WidthProfile = 0x10,
+    ProfileFadeAlpha = 0x11,
+    ProfileFadeWidth = 0x12,
+    ProfileFadeBoth = 0x13
+};
+
+enum <u32> TTrailForce
+{
+    NoForce = 0,
+    Directional = 1
+};
+
+enum <u32> TForceFlags
+{
+    DefaultForce = 0x00,
+    HalfStrength = 0x01,
+    InwardWeight = 0x02,
+    OutwardWeight = 0x04,
+    WorldDirection = 0x10,
+    WorldHalfStrength = 0x11,
+    WorldInward = 0x12,
+    WorldOutward = 0x14
+};
+
 typedef struct
 {
-    u32 Position;
+    u32 Position; // Unused by game loader: sections are read sequentially.
     u16 EntryCount;
-    u16 EntrySize;
+    u16 EntrySize; // Unused for fixed records; used as total bytes for the timeline section.
 } TTrailHeader;
 
 typedef struct
 {
     u16 Raw;
-    local float Value = ((float)Raw / 0xFFFF) * 100.0;
+    local float Value = (float)Raw / 255.0;
 } TTrailScaleU16 <read=ReadTTrailScaleU16>;
 
 string ReadTTrailScaleU16(TTrailScaleU16& value)
@@ -62,18 +98,13 @@ string ReadTTrailScaleU16(TTrailScaleU16& value)
     return str;
 }
 
-typedef struct
-{
-    u16 Raw;
-    local float Value = (float)Raw / 0xFFFF;
-} TTrailU16Norm <read=ReadTTrailU16Norm>;
-
-string ReadTTrailU16Norm(TTrailU16Norm& value)
+string ReadTTrailByteFraction(u8& value)
 {
     local string str;
-    SPrintf(str, "%.6f", value.Value);
+    SPrintf(str, "%.6f", (float)value / 255.0);
     return str;
 }
+
 
 typedef struct
 {
@@ -88,98 +119,109 @@ typedef struct
 typedef struct
 {
     u32 AnimationChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
-    u32 EntryIndex;
-    u32 Field08;
-    u32 Field0C;
-    u32 Field10;
-    u32 Lifetime;
-    u16 TrailType;
-    u16 Field1A;
-    struct TTrailU16Norm Field1C;
-    struct TTrailU16Norm Field1E;
+    u32 EntryIndex; // Matches resources, positions and forces; timelines use array order.
+    u32 AnimationRef <format=hex>; // Replaced on load: resolved AnimationChunkIndex pointer.
+    u32 Field0C <format=hex>; // Unused by game loader: skipped prefix word.
+    u32 Field10 <format=hex>; // Unknown: copied; no use found in traced NX/S4/Connections trail code.
+    u32 Lifetime; // History length in 30 FPS frames.
+    u32 Subdivisions; // Extra samples used to smooth the trail.
+    enum TTrailFlags TrailFlags; // Named bits are used; other bits have no confirmed game use.
+    u8 AlphaFade <read=ReadTTrailByteFraction>; // Unused without FadeAlpha bit; otherwise fade per update after stop, raw / 255.
+    u8 WidthFade <read=ReadTTrailByteFraction>; // Unused without FadeWidth bit; otherwise shrink per update after stop, raw / 255.
 
     struct TTrailColor ColorStart;
     struct TTrailColor ColorMiddle;
     struct TTrailColor ColorEnd;
-    f32 ColorFactor;
+    f32 ColorFactor; // Middle color position along trail distance, 0..1.
 
-    struct TTrailScaleU16 ScaleFirstBoneStart;
-    struct TTrailScaleU16 ScaleSecondBoneStart;
-    struct TTrailScaleU16 ScaleFirstBoneMiddle;
-    struct TTrailScaleU16 ScaleSecondBoneMiddle;
-    struct TTrailScaleU16 ScaleFirstBoneEnd;
-    struct TTrailScaleU16 ScaleSecondBoneEnd;
+    struct TTrailScaleU16 WidthStart; // Width samples use raw / 255.
+    struct TTrailScaleU16 WidthMiddle;
+    struct TTrailScaleU16 WidthEnd;
+    u8 WidthMiddlePoint <read=ReadTTrailByteFraction>; // Middle width position in the history; raw / 255.
+    u8 Field5B <format=hex>; // Unknown use: copied byte, seen as 0x00 and 0x20. Preserve it.
+    u8 Field5C[4]; // Unknown: copied without byte swapping; no confirmed game use.
 } TTrailManager <optimize=false>;
 
 typedef struct
 {
     u32 EffectChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
     u32 TrailEntryIndex;
-    u32 Field08;
-    u32 Field0C;
-    u32 Field10;
-    u32 Field14;
-    u32 Field18;
-    u32 Field1C;
+    u32 EffectRef <format=hex>; // Replaced on load: resolved EffectChunkIndex pointer.
+    u32 Field0C <format=hex>; // Unused by game loader: skipped prefix word.
+    u32 BillboardPtr <format=hex>; // Used as cached billboard pointer; replaced by lookup when CacheState is 0.
+    u32 CacheState <format=hex>; // 0 allows lookup; runtime becomes 2. Keep file value unchanged.
+    u32 Field18 <format=hex>; // Unknown: copied beside cache state; no confirmed game use.
+    u32 Field1C <format=hex>; // Unknown: copied resource tail; no confirmed game use.
 } TTrailResource <optimize=false>;
 
 typedef struct
 {
     s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
-    u32 TrailEntryIndex;
-    s32 Field08;
-    s32 Field0C;
-    s32 Field10;
-    s32 Field14;
-    s32 Field18;
-    s32 Field1C;
-    s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
-    s32 Field24;
-    s32 Field28;
-    s32 Field2C;
+    u32 TrailEntryIndex; // Matching records supply the trail edges, in file order.
+    s32 CoordRef; // Replaced on load: resolved CoordChunkIndex pointer.
+    s32 Field0C; // Unknown prefix word: no confirmed game use.
+    s32 Field10; // Unknown: copied; no endpoint offset or other game use established.
+    s32 Field14; // Unknown: copied; no confirmed game use.
+    s32 Field18; // Unknown: copied; no confirmed game use.
+    s32 Field1C; // Unknown: copied; no confirmed game use.
+
+    if (parentof(parentof(this)).Version >= 0x79)
+    {
+        s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+        s32 ClumpRef; // Replaced on load when ClumpChunkIndex != -1: clump reference pointer.
+        s32 Field28; // Unused by game loader (0x79+): not mapped into runtime data.
+        s32 Field2C; // Unused by game loader (0x79+): not mapped into runtime data.
+    }
 } TTrailPosition <optimize=false>;
 
 typedef struct
 {
-    s32 Field00;
+    s32 CoordChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
     u32 TrailEntryIndex;
-    s32 Field08;
-    s32 Field0C;
-    struct TTrailU16Norm Field10;
-    struct TTrailU16Norm Field12;
-    f32 Field14;
-    s32 Field18;
-    s32 Field1C;
-    s32 Field20;
-    f32 Field24;
-    f32 Field28;
-    s32 Field2C;
-    s32 Field30;
-    s32 Field34;
-    s32 Field38;
-    s32 Field3C;
+    s32 CoordRef <format=hex>; // Replaced on load: resolved CoordChunkIndex pointer.
+    s32 Field0C <format=hex>; // Unknown prefix word: no confirmed game use.
+    f32 DirectionX;
+    f32 DirectionY;
+    f32 DirectionZ;
+    f32 VelocityGrowth; // Each update: velocity += velocity * value.
+    enum TTrailForce ForceType;
+    f32 Radius; // Game multiplies this value by 100.
+    f32 Strength;
+    enum TForceFlags ForceFlags; // Named bits are used; other bits have no confirmed game use.
+
+    if (parentof(parentof(this)).Version >= 0x79)
+    {
+        s32 ClumpChunkIndex <read=ReadTXfbinChunkIndexS32(this, parentof(parentof(parentof(parentof(this)))).pageStart)>;
+        s32 ClumpRef <format=hex>; // Replaced on load when ClumpChunkIndex != -1: clump reference pointer.
+        s32 Field38; // Unused by game loader (0x79+): not mapped into runtime data.
+        s32 Field3C; // Unused by game loader (0x79+): not mapped into runtime data.
+    }
 } TTrailForceField <optimize=false>;
 
 typedef struct
 {
-    u16 Flag;
-    u16 FrameRaw;
-    local float Frame = (float)FrameRaw / 0x64;
+    u32 Raw;
+    local u32 TimeUnits = Raw & 0x7FFFFFFF;
+    local int Enabled = (Raw & 0x80000000) != 0;
+    local u16 chunkVersion = parentof(parentof(parentof(this))).Version;
 } TTrailFrame <read=ReadTTrailFrame>;
 
 string ReadTTrailFrame(TTrailFrame& value)
 {
     local string str;
-    SPrintf(str, "%s %.2f", value.Flag ? "ENABLED" : "DISABLED", value.Frame);
+    if (value.chunkVersion >= 0x79)
+        SPrintf(str, "%s - %u ticks", value.Enabled ? "On" : "Off", value.TimeUnits);
+    else
+        SPrintf(str, "%s - %u legacy", value.Enabled ? "On" : "Off", value.TimeUnits);
     return str;
 }
 
 typedef struct
 {
-    u32 Field00;
-    u32 TrailEntryIndex;
-    u32 Field08;
-    u32 Field0C;
+    u32 Field00 <format=hex>; // Unused by game loader: part of the skipped 16-byte prefix.
+    u32 TrailEntryIndex; // Unused by game: timelines attach by node order, not this stored ID.
+    u32 Field08 <format=hex>; // Unused by game loader: skipped prefix word.
+    u32 Field0C <format=hex>; // Unused by game loader: skipped prefix word.
     u32 FrameCount;
     struct TTrailFrame Frames[FrameCount] <optimize=false>;
     FSkip((4 + (FrameCount * 4)) % 8);
@@ -193,4 +235,4 @@ typedef struct
     struct TTrailPosition TrailPositions[TrailHeaders[2].EntryCount] <optimize=false>;
     struct TTrailForceField TrailForceFields[TrailHeaders[3].EntryCount] <optimize=false>;
     struct TTrailNode TrailNodes[TrailHeaders[4].EntryCount] <optimize=false>;
-} TNuccTrail;
+} TNuccTrail <optimize=false>;

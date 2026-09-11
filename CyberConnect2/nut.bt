@@ -3,14 +3,17 @@
 //
 //      File: nut.bt
 //   Authors: SutandoTsukai181 (Based on Smash Forge implementation)
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Parse Bandai Namco NUT texture files
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
 //   History: 
 //   1.0 - Initial release
+//   1.1 - Runtime offset context and texture-record extent preservation
 //------------------------------------------------
+
+
 
 #define NUT
 
@@ -26,7 +29,7 @@ typedef struct
     char Magic[4]; Assert( Magic == "NTP3" );
     u16 Version;
 
-    u16 Count;
+    u16 Count <comment="Texture-record count; each record advances by its own TotalSize.">;
     u32 Padding[2] <hidden=true>;
 
     struct TNutTexture NutTexture[Count];
@@ -36,17 +39,17 @@ typedef struct
 {
     SetBackColor(nutTexColor);
 
-    local u32 startPosition = FTell();
+    local u64 startPosition = FTell();
 
-    u32 TotalSize;
+    u32 TotalSize <comment="Complete texture-record byte size, including headers, data and padding.">;
     u32 Field04 <hidden=true>;
 
-    u32 DataSize;
-    u16 HeaderSize;
+    u32 DataSize <comment="Encoded image data size; decoding/swizzle depends on PixelFormat and platform.">;
+    u16 HeaderSize <comment="Texture header byte length; current detailed view follows the inline-data layout.">;
     u16 Field0E <hidden=true>;
 
     u8 Field10 <hidden=true>;
-    u8 MipmapCount;
+    u8 MipmapCount <comment="Includes the largest image level; a size table follows when greater than one.">;
     u8 Field12 <hidden=true>;
     u8 PixelFormat;
 
@@ -87,7 +90,7 @@ typedef struct
     char GIDX[4];
     FSkip( 4 );
 
-    u32 HashId;
+    u32 HashId <format=hex, comment="Runtime texture identifier in GIDX; may be assigned/replaced when the XFBIN loads.">;
     FSkip( 4 );
 
     local int i;
@@ -111,8 +114,26 @@ typedef struct
     {
         u8 TextureData[DataSize];
     }
-} TNutTexture <optimize=false>;
+    // GetInfo advances by TotalSize even when data includes additional cube
+    // faces or padding. Preserve such bytes instead of misreading the next
+    // texture header at the end of only the first mip chain.
+    Assert(FTell() <= startPosition + TotalSize, "NUT texture exceeds its TotalSize");
+    if (FTell() < startPosition + TotalSize)
+    {
+        u8 RemainingTextureData[startPosition + TotalSize - FTell()]
+            <comment="Remaining encoded data/padding; may include additional cubemap faces.">;
+    }
+} TNutTexture <optimize=false, read=ReadNutTexture>;
+
+string ReadNutTexture(TNutTexture& value)
+{
+    local string str;
+    SPrintf(str, "%d x %d | format %d | %d mips | ID 0x%X",
+        value.Width, value.Height, value.PixelFormat, value.MipmapCount, value.HashId);
+    return str;
+}
 
 #ifndef XFBIN
+    BigEndian();
     TNut Nut;
 #endif

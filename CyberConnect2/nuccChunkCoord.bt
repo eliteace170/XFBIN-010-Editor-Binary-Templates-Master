@@ -1,0 +1,35 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkCoord.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkCoord data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    // NX nuccChunkCoord::Parse 0x71010DCE88: translate, Euler ZYX, then scale.
+    f32 LocX;
+    f32 LocY;
+    f32 LocZ;
+
+    f32 RotX <comment="Degrees; converted to radians before FromEulerZYX.">;
+    f32 RotY <comment="Degrees; converted to radians before FromEulerZYX.">;
+    f32 RotZ <comment="Degrees; converted to radians before FromEulerZYX.">;
+
+    f32 ScaleX;
+    f32 ScaleY;
+    f32 ScaleZ;
+    if ( parentof(this).Version >= 0x65 )
+        f32 UnkFloat <comment="Runtime defaults to 1.0 for versions before 0x65; meaning unverified.">;
+
+    if ( parentof(this).Version >= 0x67 )
+    {
+        u16 UnkShort <comment="Present from version 0x67; runtime defaults to zero in earlier versions.">;
+    }
+} TNuccCoord;

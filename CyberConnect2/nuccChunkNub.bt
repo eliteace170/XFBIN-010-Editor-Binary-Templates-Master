@@ -1,10 +1,10 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
+//      File: nuccChunkNub.bt
 //   Authors: SutandoTsukai181
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//   Version: 1.1
+//   Purpose: Size-delimited sound-bank payload with optional bank-specific views
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
@@ -31,10 +31,19 @@ string GetChannelType(uint ChannelID)
     
     return channel_type;
 }
-local u32 PACK_OFFSET;
+local u64 PACK_OFFSET;
+// Executable-verified wrapper: NSUNS3HD_NX 0x71010E5420;
+// NSUNS4_107 0x140A86C10. Both read a big-endian byte count and copy that
+// many opaque bytes. The nested NUS3/ACB interpretations below are inherited
+// format research; these NUCC parsers do not establish their sound semantics.
 typedef struct
 {
-    u32 FileSize;
+    u32 FileSize <comment="Bank payload bytes only; excludes this 4-byte size field.">;
+    local u64 payloadStart = FTell();
+    local u64 payloadEnd = payloadStart + FileSize;
+    Assert(payloadEnd <= startof(this) + parentof(this).Size, "Sound bank exceeds NUCC payload");
+    if (FileSize >= 4)
+    {
     char   format[4]<hidden=true>;
 
     if (format[0] == 0x4E
@@ -66,9 +75,20 @@ typedef struct
          
         FSeek( FTell() - 4 ); 
         struct TNuccACB ACB;
-        u8 Data[FileSize - (exists(ACB) ? sizeof(ACB) : 0)];
+        Assert(sizeof(ACB) <= FileSize, "ACB header exceeds bank size");
+        u8 Data[FileSize - sizeof(ACB)];
       }
-      
+      else
+      {
+        u8 UnknownBankData[FileSize - 4] <comment="Unrecognized bank signature; bytes preserved without guessing a codec.">;
+      }
+    }
+    else
+    {
+        u8 ShortBankData[FileSize];
+    }
+    Assert(FTell() <= payloadEnd, "Nested sound-bank parser exceeded the NUCC bank size");
+    FSeek(payloadEnd);
     BigEndian();
 } TNuccNub;
 
@@ -79,12 +99,12 @@ typedef struct
 
     // header dwords that appear after format in many NUS3BANKs
     u32     NUS3BANK_SIZE;               // a2[1] in IDA (used by some code)
-    char     BANKTOC[8];               // should be 'KNAB' (a2[2])
+    char     BANKTOC[8];               // raw bytes of the BANK / TOC FourCC pair
     u32     BANKTOC_SIZE;    // a2[4] - offset (relative to file start) to data blocks / payload table base
     u32     entryCount;         // a2[5] - number of entries in directory
 
     // compute base file offset for this NUS3 block
-    local u64 baseOffset = FTell() - 8 - 0x10; // we've read 8 bytes (format + size), so step back to start
+    local u64 baseOffset = startof(this); // start of the embedded NUS3 FourCC
 
     // read directory entries (they live just after the first 6 dwords of header)
     FPush();
@@ -118,7 +138,7 @@ typedef struct
     // положим найденное значение в глобальную переменную (однократно, до основного цикла)
     // PACK_OFFSET объявлен вверху файла: local u32 PACK_OFFSET;
     if ( pack_ptr )
-        PACK_OFFSET = (u32)pack_ptr;
+        PACK_OFFSET = pack_ptr;
     else
         PACK_OFFSET = 0;
     
@@ -168,7 +188,7 @@ typedef struct
         else if ( fourcc == FourCC("KCAP") )
         {
             PACK_OFFSET = FTell();
-            // KCAP - pointer/offset table expected; store as raw pointer-list
+            // PACK payload contains encoded sound data addressed by tone records.
             u8 PACK_Data[ blockSize ];
         }
         else if ( fourcc == FourCC("KRAM") )

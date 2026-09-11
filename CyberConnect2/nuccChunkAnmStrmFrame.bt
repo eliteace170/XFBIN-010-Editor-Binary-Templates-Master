@@ -15,60 +15,83 @@
 
 
 
+// IDA: NSUNS3HD_NX AnmStrmFrame_Parse @ 0x7100030710 reads an 8-byte
+// entry header, then exactly EntrySize bytes. The first payload word is a
+// channel-presence mask, not an entry type. SetStrmFrame consumers advance only
+// over present channels. Unknown/short payloads remain visible as raw bytes.
+// Rotation is the engine's 16-byte SetFromXfbin representation; its component
+// convention is not established here. No camera scale channel is consumed.
 typedef struct
 {
     struct TAnmCoord Coord;
-
     u16 EntryFormat <read=ReadTStrmEntryFormat>;
-    u16 EntrySize;
-    u32 CurveType <read=ReadTStrmCurveType>;
-
+    u16 EntrySize; // Payload bytes, including the 4-byte mask; excludes this header.
+    local int64 PayloadStart = FTell();
+    local int64 PayloadEnd = PayloadStart + EntrySize;
     local int i;
 
-    struct
-	{
-        local u16 EntryFormatForRead = EntryFormat;
-        local u32 CurveTypeForRead = CurveType;
-        local int EntryDataSize = EntrySize >= 4 ? EntrySize - 4 : 0;
-
-        if (EntryFormat == 1){ //Bone Entry
-            struct TVector3 BonePosition;
-            struct TVector4 BoneRotation;
-            struct TVector3 BoneScale;
-            f32 BoneOpacity;
-
-        }
-        else if (EntryFormat == 2){ //Camera Entry
-            struct TVector3 CameraPosition;
-            struct TVector4 CameraRotation;
-            f32 CameraFOV;
-            struct TVector3 CameraScale;
-
-        }
-        else if (EntryFormat == 4){ //Material Entry
-            f32 MaterialValues[16] <optimize=false>;
-                
-        }
-		else if (EntryFormat == 5){ //LightDirc Entry
-            struct TVector3 DirectionalLightColor;
-            f32 DirectionalLightIntensity;
-            struct TVector4 DirectionalLightDirection;
-        }
-        else if (EntryFormat == 6){ //LightPoint Entry
-            struct TVector3 PointLightColor;
-            struct TVector3 PointLightPosition;
-            f32 PointLightIntensity;
-            f32 PointLightRange;
-            f32 PointLightFalloff;
-        }
-        else if (EntryFormat == 8){ //Ambient Entry
-            struct TVector4 AmbientColor;
-        }
-        else
+    if (EntrySize >= 4)
+    {
+        u32 CurveType <read=ReadTStrmCurveType>;
+        local int MaterialBytes = 0;
+        for (i = 0; i < 18; i++) if (CurveType & (1 << i)) MaterialBytes += 4;
+        struct
         {
-            u8 EntryData[EntryDataSize] <optimize=false>;
-        }
-	} TAnmFrameCurve <read=ReadTStrmFrameCurve(this.EntryFormatForRead, this.CurveTypeForRead)>;
+            local u16 EntryFormatForRead = EntryFormat;
+            local u32 CurveTypeForRead = CurveType;
+            if (EntryFormat == 1 && (12*((CurveType >> 0)&1)+16*((CurveType >> 1)&1)+12*((CurveType >> 2)&1)+4*((CurveType >> 3)&1)) <= EntrySize - 4 && (CurveType & 0xFFFFFFF0) == 0)
+            {
+                if ((CurveType & 1) && FTell() + 12 <= PayloadEnd) { struct TVector3 BonePosition; }
+                if ((CurveType & 2) && FTell() + 16 <= PayloadEnd) { f32 BoneRotationPayload[4]; }
+                if ((CurveType & 4) && FTell() + 12 <= PayloadEnd) { struct TVector3 BoneScale; }
+                if ((CurveType & 8) && FTell() + 4 <= PayloadEnd) { f32 BoneOpacity; }
+            }
+            else if (EntryFormat == 2 && (12*((CurveType >> 0)&1)+16*((CurveType >> 1)&1)+4*((CurveType >> 2)&1)) <= EntrySize - 4 && (CurveType & 0xFFFFFFF8) == 0)
+            {
+                if ((CurveType & 1) && FTell() + 12 <= PayloadEnd) { struct TVector3 CameraPosition; }
+                if ((CurveType & 2) && FTell() + 16 <= PayloadEnd) { f32 CameraRotationPayload[4]; }
+                if ((CurveType & 4) && FTell() + 4 <= PayloadEnd) { f32 CameraFOV; }
+            }
+            else if (EntryFormat == 4 && MaterialBytes <= EntrySize - 4 && (CurveType & 0xFFFC0000) == 0)
+            {
+                // NX nuccMaterial::SetStrmFrame @ 0x710110CA50: at most 18
+                // scalar channels, in ascending bit order. Retain channel ids;
+                // streamed channel names need not match every Anm version.
+                for (i = 0; i < 18; i++)
+                {
+                    if ((CurveType & (1 << i)) && FTell() + 4 <= PayloadEnd)
+                    {
+                        struct { local int ChannelIndex = i; f32 Value; } MaterialChannel;
+                    }
+                }
+            }
+            else if (EntryFormat == 5 && (12*((CurveType >> 0)&1)+4*((CurveType >> 1)&1)+16*((CurveType >> 2)&1)) <= EntrySize - 4 && (CurveType & 0xFFFFFFF8) == 0)
+            {
+                if ((CurveType & 1) && FTell() + 12 <= PayloadEnd) { struct TVector3 DirectionalLightColor; }
+                if ((CurveType & 2) && FTell() + 4 <= PayloadEnd) { f32 DirectionalLightIntensity; }
+                if ((CurveType & 4) && FTell() + 16 <= PayloadEnd) { f32 DirectionalLightRotationPayload[4]; }
+            }
+            else if (EntryFormat == 6 && (12*((CurveType >> 0)&1)+4*((CurveType >> 1)&1)+12*((CurveType >> 2)&1)+4*((CurveType >> 3)&1)+4*((CurveType >> 4)&1)) <= EntrySize - 4 && (CurveType & 0xFFFFFFE0) == 0)
+            {
+                // Position (bit 2) precedes intensity (bit 1) on the wire.
+                if ((CurveType & 1) && FTell() + 12 <= PayloadEnd) { struct TVector3 PointLightColor; }
+                if ((CurveType & 4) && FTell() + 12 <= PayloadEnd) { struct TVector3 PointLightPosition; }
+                if ((CurveType & 2) && FTell() + 4 <= PayloadEnd) { f32 PointLightIntensity; }
+                if ((CurveType & 8) && FTell() + 4 <= PayloadEnd) { f32 PointLightRange; }
+                if ((CurveType & 16) && FTell() + 4 <= PayloadEnd) { f32 PointLightFalloff; }
+            }
+            else if (EntryFormat == 8 && (12*((CurveType >> 0)&1)+4*((CurveType >> 1)&1)) <= EntrySize - 4 && (CurveType & 0xFFFFFFFC) == 0)
+            {
+                if ((CurveType & 1) && FTell() + 12 <= PayloadEnd) { struct TVector3 AmbientColor; }
+                if ((CurveType & 2) && FTell() + 4 <= PayloadEnd) { f32 AmbientIntensity; }
+            }
+            if (FTell() < PayloadEnd) { u8 EntryData[PayloadEnd - FTell()] <optimize=false>; }
+        } TAnmFrameCurve <read=ReadTStrmFrameCurve(this.EntryFormatForRead, this.CurveTypeForRead)>;
+    }
+    else
+    {
+        u8 EntryData[EntrySize];
+    }
 } TNuccAnmStrmFrame <optimize=false>;
 
 string ReadTStrmEntryFormat(u16& value)
@@ -98,18 +121,7 @@ string ReadTStrmEntryFormat(u16& value)
 string ReadTStrmCurveType(u32& value)
 {
     local string str;
-
-    switch (value)
-    {
-        case 0x07:
-            return "Camera";
-        case 0x0F:
-            return "Bone";
-        case 0xFFFF:
-            return "Material";
-    }
-
-    SPrintf(str, "0x%X", value);
+    SPrintf(str, "Channel mask 0x%X", value);
     return str;
 }
 

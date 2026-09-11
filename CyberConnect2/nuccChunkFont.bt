@@ -3,34 +3,67 @@
 //
 //      File: nuccChunkFont.bt
 //   Authors: HydraBladeZ
-//   Version: 1.0
-//   Purpose: 
+//   Version: 1.1
+//   Purpose: NFH bitmap-font metadata followed by a NUT texture bank
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
 //   History: 
 //------------------------------------------------
 
-typedef struct{
-    uint NFH_ChunkSize;
-    uint NUT_ChunkSize;
-    
-    
-    byte NFH_Data[NFH_ChunkSize];
-    
-    struct TNut NUT;
-    
-    typedef struct{
-    char magic[4];
-    
-    int FontIndex;
-    int CharacterCount;
-    int unk3;
+// NSUNS3HD_NX Parse 0x71010DE490; NSUNS4_107 Parse 0x140A852B0.
+// Both convert NFH +0x04/+0x08, 256 words at +0x50, and CharacterCount
+// records of 0x20 bytes at +0x450. The original NFH typedef was never read.
+// Names and FontType are inherited interpretations, not established by Parse.
+typedef struct
+{
+    u32 TextureID <format=hex, comment="Overwritten at load time with the allocated NUT texture ID.">;
+    u16 Field04;
+    u16 Field06;
+    u16 Field08;
+    u16 Field0A;
+    u16 Field0C;
+    u16 Field0E;
+    u16 Field10;
+    u16 Field12;
+    u8 Field14[12] <comment="Not endian-converted by the examined glyph helper; interpretation unknown.">;
+} TNuccFontGlyph <optimize=false>;
+
+typedef struct(u32 dataSize)
+{
+    local u64 nfhStart = FTell();
+    char Magic[4];
+    u32 Field04 <comment="Used to initialize runtime font dimensions; old FontIndex name was unverified.">;
+    u32 CharacterCount;
+    u8 Field0C[4] <comment="Not endian-converted by the examined font parser.">;
     char FontName[32];
     char FontType[32];
-    
-    short unk4;
-    short unk5;
-    }NFH;
+    u32 LookupTable[256] <comment="Fixed 256-word table at NFH +0x50; precise lookup semantics remain unverified.">;
+    Assert((u64)CharacterCount * 32 <= dataSize - 0x450, "NFH glyph records exceed NFH size");
+    TNuccFontGlyph Glyph[CharacterCount] <optimize=false>;
+    if (FTell() < nfhStart + dataSize)
+    {
+        u8 TrailingData[nfhStart + dataSize - FTell()];
+    }
+} TNuccNfh <optimize=false>;
 
-}TnuccFont;
+typedef struct
+{
+    u32 NFH_ChunkSize <comment="Exact byte length of the following font metadata blob.">;
+    u32 NUT_ChunkSize <comment="Exact byte length of the following NUT texture bank.">;
+    if (NFH_ChunkSize >= 0x450)
+    {
+        TNuccNfh NFH(NFH_ChunkSize);
+    }
+    else
+    {
+        u8 NFH_Data[NFH_ChunkSize] <comment="Too short for the executable-verified NFH layout; preserved raw.">;
+    }
+    local u64 nutStart = FTell();
+    TNut TextureBank;
+    Assert(FTell() <= nutStart + NUT_ChunkSize, "NUT exceeds font texture-bank size");
+    if (FTell() < nutStart + NUT_ChunkSize)
+    {
+        u8 NUT_TrailingData[nutStart + NUT_ChunkSize - FTell()];
+    }
+} TnuccFont <optimize=false>;

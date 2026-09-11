@@ -1,10 +1,10 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
+//      File: nuccChunkModelPrimitiveBatch.bt
 //   Authors: SutandoTsukai181
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//   Version: 1.1
+//   Purpose: Chunk references and draw parameters for primitive vertex data
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
@@ -14,31 +14,48 @@
 
 #include "/../include.h";
 
+// NSUNS3HD_NX Parse 0x71010E481C / FinalizeParsing 0x71010E4B90;
+// NSUNS4_107 Parse 0x140A79730. Header is 0x1C bytes through v0x76,
+// 0x20 bytes thereafter, followed by 12 bytes and an optional 8-byte pair.
 typedef struct
 {
-    u32 unk1;
-    u32 unk2;
-    u32 unk3;
-    u32 unk4;
+    u32 ChunkIndex00 <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart), comment="Resolved by GetIndex; target role not yet verified.">;
+    u32 ChunkIndex04 <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart), comment="Resolved by GetIndex; target role not yet verified.">;
+    u32 PrimitiveVertexIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart), comment="FinalizeParsing copies vertex metadata and buffer from this reference.">;
+    u32 Field0C;
     u16 EntryCount;
-    u16 unk5;
-    u32 unk6;
-    u16 unk7;
-    u16 unk8;
-    u32 unk9;
-    u32 unk10;
-    u32 Shader_ID;
-    u32 unk11;
-    u32 unk12;
-    u32 unk13;
+    u16 ExtraPairMode <comment="Value 1 adds two 32-bit words after the common parameter triplet.">;
+    u16 Field14;
+    u16 Field16;
+    if (parentof(this).Version > 0x76)
+    {
+        u16 Field18;
+        u8 Field1A;
+        u8 Field1B;
+        u32 Field1C;
+    }
+    else
+    {
+        u32 LegacyField18;
+    }
 
-    struct{
-        struct{
-            u32 EntryID;
-            u32 unk1;
-            u32 unk2;
-            
-        }Entry[EntryCount];  
-    }Entries;
+    // Copied into runtime draw parameters. Precise render semantics remain
+    // unverified; in particular, the old Shader_ID name was unsupported.
+    u32 Parameter0;
+    u32 Parameter1;
+    u32 Parameter2;
+    if (ExtraPairMode == 1)
+    {
+        u32 ExtraParameter0;
+        u32 ExtraParameter1;
+    }
 
-} TNuccModelPrimitiveBatch;
+    Assert((u64)EntryCount * 12 <= startof(this) + parentof(this).Size - FTell(),
+        "Primitive batch entries exceed chunk payload");
+    struct
+    {
+        u32 Index0 <comment="Serialized as u32, narrowed to u16 in the first runtime index array.">;
+        u32 Index1 <comment="Serialized as u32, narrowed to u16 in the second runtime index array.">;
+        u32 Field08 <comment="Read and endian-converted, but not retained by the examined parser.">;
+    } Entry[EntryCount] <optimize=false>;
+} TNuccModelPrimitiveBatch <optimize=false>;

@@ -1,16 +1,15 @@
 //------------------------------------------------
-//--- 010 Editor v15.0 Binary Template
-//
-//      File: 
-//   Authors: 
-//   Version: 
-//   Purpose: The master file that includes all the binary directories
-//  Category: 
-// File Mask: 
-//  ID Bytes: 
-//   History: 
-//------------------------------------------------]
+// 010 Editor v15 Binary Template
+// File: nuccChunkBinary.bt
+// Purpose: Dispatch binary chunks to their specific templates.
+// The enclosing XFBIN chunk supplies chunkName and Size (payload bytes).
+// Exact names take precedence over suffixes. Unknown chunks remain raw Data.
+//------------------------------------------------
 
+#ifndef NUCC_CHUNK_BINARY_BT
+#define NUCC_CHUNK_BINARY_BT
+
+// Preserve include order: some binary templates share declarations.
 #include "nuccChunkBinaries/pairSpSkillCombinationParam.bt"
 #include "nuccChunkBinaries/prmParam.bt"
 #include "nuccChunkBinaries/acc.bin.bt"
@@ -45,6 +44,7 @@
 #include "nuccChunkBinaries/iteminfo.bt"
 #include "nuccChunkBinaries/logParam.bt"
 #include "nuccChunkBinaries/musicParam.bt"
+#include "nuccChunkBinaries/stageinfoS4.bt"
 #include "nuccChunkBinaries/netMenuParam.bt"
 #include "nuccChunkBinaries/nickNameParam.bt"
 #include "nuccChunkBinaries/NinjaCardsSkinParam.bt"
@@ -60,223 +60,228 @@
 #include "nuccChunkBinaries/spTypesupport.bt"
 #include "nuccChunkBinaries/voiceParam.bt"
 
-typedef struct
-{  
-    switch (chunkName)     
-        { 
-            case ("pairSpSkillCombinationParam"):
-                struct pairSpSkillCombinationParam TeamOugiIndex;
-                break;
-            case ("acc"):
-            case ("acc.bin"):
-                struct AccesoriesSettings Accessory;
-                break;
-            case ("accessoriesParam"):
-                struct accessoriesParam AccessoriesData;
-                break;
-            case ("accessoryExceptionParam"):
-                struct accessoryExceptionParam accessoryException;
-                break;
-            case ("accessoryNotAttachParam"):
-                struct accessoryNotAttachParam accessoryNotAttach;
-                break;
-            case ("accessoryParam"):
-                struct accessoryParam AccessoryParam;
-                break; 
-            case ("ApperenceAnm"):
-                struct ApperenceAnm ApperenceAnmData;
-                break;
-            case ("awakeaura"):
-            case ("awakeAura"):
-                struct awakeaura AwakeAuraData;
-                break;
-            case ("characterSelectParam"):
-                struct characterSelectStruct CharacterSelectData;
-                break;
-            case ("CharaPoseParam"):
-                struct CharaPoseParam CharaPoseData;
-                break;
-            case ("charaTagParam"):
-                struct charaTagParam charaTagData;
-                break;
-            case ("chatStampParam"):
-                struct chatStampParam chatStampData;
-                break;
-            case ("collectNameParam"):
-                struct collectNameParam collectNameData;
-                break;
-            case ("conditionprm"):
-                struct conditionprm ConditionPrmData;
-                break;
-            case ("costumeBreakColorParam"):
-                struct costumeBreakColorParam costumeBreakColor;
-                break;
-            case ("costumeBreakParam"):
-                struct costumeBreakParam costumeBreakData;
-                break;
-            case ("costumeParam"):
-                struct costumeParam costumeParamData;
-                break;
-            case ("cpuActionParam"):
-            case ("cpuActionParam.bin"):
-                struct cpuActionParam CpuActionData;
-                break;
-            case ("cpuPlayerParam"):
-            case ("cpuPlayerParam.bin"):
-                struct cpuPlayerParam CpuPlayerData;
-                break;
-            case ("cpu_script"):
-            case ("cpu_script.bin"):
-                struct cpu_script CpuScriptData;
-                break;
-            case ("cpu_strength"):
-            case ("cpu_strength.bin"):
-                struct cpu_strength CpuStrengthData;
-                break;
-            case ("damageeff.bin"):
-                struct damageeff_bin DamageEffectData;
-                break;
-            case ("DictionaryCharacterParam"):
-                struct DictionaryCharacterParam DictionaryCharacterData;
-                break;
-            case ("DlcInfoParam"):
-                struct DlcInfoParam DlcInfoData;
-                break;
-            case ("duelPlayerParam"):
-                struct duelPlayerParam DuelPlayerData;
-                break;
-            case ("ev"):
-                struct BattleSoundStruct BattleSoundData;
-                break;
-            case ("ev_spl"):
-                struct SoundEventStruct CutsceneSoundData;
-                break;
-            case ("finalSpSkillCutIn"):
-                struct finalSpSkillCutIn FinalSpSkillCutInData;
-                break;
-            case ("homeBgParam"):
-                struct homeBgParam HomeBgData;
-                break;
-            case ("itemCustomizeParam"):
-                struct itemCustomizeParam ItemCustomizeData;
-                break;
-            case ("iteminfo"):
-                struct iteminfo ItemInfoData;
-                break;
-            case ("logParam"):
-                struct logParam LogData;
-                break;
-            case ("musicParam"):
-                struct musicParam MusicData;
-                break;
-            case ("netMenuParam"):
-                struct netMenuParam NetMenuData;
-                break;
-            case ("nickNameParam"):
-                struct nickNameParam NickNameData;
-                break;
-            case ("NinjaCardsSkinParam"):
-                struct NinjaCardsSkinParam NinjaCardsSkinData;
-                break;
-            case ("ninjaInfoCardsParam"):
-                struct ninjaInfoCardsParam NinjaInfoCardsData;
-                break;
-            case ("optionParam"):
-                struct optionParam OptionData;
-                break;
-            case ("OugiFinishParam"):
-                struct OugiFinishParam OugiFinishData;
-                break;
-            case ("playerDoubleEffectParam"):
-                struct playerDoubleEffectParam PlayerDoubleEffectData;
-                break;
-            case ("playerSettingParam"):
-                struct playerSettingParam PlayerSettingData;
-                break;
-            case ("privateCamera"):
-                struct privateCamera PrivateCameraData;
-                break;
-            case ("SkillIndexParam"):
-                struct SkillIndexParam SkillIndexData;
-                break;
-            case ("SoundEvent"):
-                struct SoundEvent SoundEventData;
-                break;
-            case ("specialChatParam"):
-                struct specialChatParam SpecialChatData;
-                break;
-            case ("spTypesupport"):
-                struct spTypesupport SpTypeSupportData;
-                break;
-            case ("voiceParam"):
-                struct voiceParam VoiceData;
-                break;
-            default:
-                // Compare chunkName to each suffix
-                if (EndsWith(chunkName, "prm_awa")  // character controls
-                    || EndsWith(chunkName, "prm_skl")
-                    || EndsWith(chunkName, "prm_awa2")
-                    || EndsWith(chunkName, "prm_spl")
-                    || EndsWith(chunkName, "prm_boss")
-                    || EndsWith(chunkName, "prm_upgrade01")
-                    || EndsWith(chunkName, "prm_upgrade02")
-                    || EndsWith(chunkName, "prm_upgrade03")
-                    || EndsWith(chunkName, "prm_boss01")
-                    || EndsWith(chunkName, "prm_boss02")
-                    || EndsWith(chunkName, "prm_boss03")
-                    || EndsWith(chunkName, "prm_boss04"))            
-                    {
-                        struct Pl_AnmStructMain VerBinary;
-                        
-                    }
-                else if (EndsWith(chunkName, "prm_sklslot") ) // _x skill slots basically projectiles index
-                    {
-                         struct ProjectileEntries ProjectileSettings; 
-                   
-                    } 
-                else if (EndsWith(chunkName, "prm_etc") ) //movement settings
-                    {
-                         struct GeneralMovementEntries MovementSettings; 
-                    }
-                else if (EndsWith(chunkName, "prm_hit") ) //for hurtspheres and hitspheres
-                    {
-                         struct CollisionStruct CollisionSettings;   
-                    } 
-                else if (EndsWith(chunkName, "prm_load") )
-                    {
-                         struct PrmLoadSettings Files;     
-                    } 
-                else if (EndsWith(chunkName, "acc") )
-                    {
-                         struct AccesoriesSettings AccessoryBySuffix;         
-                    } 
-                else if (EndsWith(chunkName, "_atk_snd") || EndsWith(chunkName, "_cut_snd") )
-                    {
-                         struct SoundEventStruct CutsceenSounds;         
-                    } 
-				else if (EndsWith(chunkName, "_ev") )
-                    {
-                         struct BattleSoundStruct BattleSounds;         
-                    }
-                else
-                {
-                    uchar Data[Size];
-                }
-            break;
-        }
-}nuccChunkBinary<optimize= false>;
-
-int EndsWith(string str, string suffix)
+// Case-sensitive suffix matching; an empty suffix matches every name.
+bool BinaryEndsWith(string name, string suffix)
 {
-    local int str_len = Strlen(str);
-    local int suffix_len = Strlen(suffix);
-
-    // Check if the string is long enough to contain the suffix
-    if (str_len >= suffix_len)
-    {
-        // Extract the end of the string and compare with the suffix
-        local string endOfString = SubStr(str, str_len - suffix_len, suffix_len);
-        return (Strcmp(endOfString, suffix) == 0);
-    }
-    return 0;  // Return false if the string is shorter than the suffix
+    local int nameLength = Strlen(name);
+    local int suffixLength = Strlen(suffix);
+    if (nameLength < suffixLength) return false;
+    return Strcmp(SubStr(name, nameLength - suffixLength, suffixLength), suffix) == 0;
 }
+
+// Animation/action parameters share one parser across these name suffixes.
+bool BinaryIsCharacterParam(string name)
+{
+    return BinaryEndsWith(name, "prm_awa")
+        || BinaryEndsWith(name, "prm_skl")
+        || BinaryEndsWith(name, "prm_awa2")
+        || BinaryEndsWith(name, "prm_spl")
+        || BinaryEndsWith(name, "prm_boss")
+        || BinaryEndsWith(name, "prm_upgrade01")
+        || BinaryEndsWith(name, "prm_upgrade02")
+        || BinaryEndsWith(name, "prm_upgrade03")
+        || BinaryEndsWith(name, "prm_boss01")
+        || BinaryEndsWith(name, "prm_boss02")
+        || BinaryEndsWith(name, "prm_boss03")
+        || BinaryEndsWith(name, "prm_boss04");
+}
+
+// Keep each parsed node directly under BinaryStructure in the results tree.
+typedef struct
+{
+    switch (chunkName)
+    {
+        case "pairSpSkillCombinationParam":
+            struct pairSpSkillCombinationParam TeamOugiIndex;
+            break;
+        case "acc":
+        case "acc.bin":
+            struct AccesoriesSettings Accessory;
+            break;
+        case "accessoriesParam":
+            struct accessoriesParam AccessoriesData;
+            break;
+        case "accessoryExceptionParam":
+            struct accessoryExceptionParam accessoryException;
+            break;
+        case "accessoryNotAttachParam":
+            struct accessoryNotAttachParam accessoryNotAttach;
+            break;
+        case "accessoryParam":
+            struct accessoryParam AccessoryParam;
+            break;
+        case "ApperenceAnm":
+            struct ApperenceAnm ApperenceAnmData;
+            break;
+        case "awakeaura":
+        case "awakeAura":
+            struct awakeaura AwakeAuraData;
+            break;
+        case "characterSelectParam":
+            struct characterSelectStruct CharacterSelectData;
+            break;
+        case "CharaPoseParam":
+            struct CharaPoseParam CharaPoseData;
+            break;
+        case "charaTagParam":
+            struct charaTagParam charaTagData;
+            break;
+        case "chatStampParam":
+            struct chatStampParam chatStampData;
+            break;
+        case "collectNameParam":
+            struct collectNameParam collectNameData;
+            break;
+        case "conditionprm":
+            struct conditionprm ConditionPrmData;
+            break;
+        case "costumeBreakColorParam":
+            struct costumeBreakColorParam costumeBreakColor;
+            break;
+        case "costumeBreakParam":
+            struct costumeBreakParam costumeBreakData;
+            break;
+        case "costumeParam":
+            struct costumeParam costumeParamData;
+            break;
+        case "cpuActionParam":
+        case "cpuActionParam.bin":
+            struct cpuActionParam CpuActionData;
+            break;
+        case "cpuPlayerParam":
+        case "cpuPlayerParam.bin":
+            struct cpuPlayerParam CpuPlayerData;
+            break;
+        case "cpu_script":
+        case "cpu_script.bin":
+            struct cpu_script CpuScriptData;
+            break;
+        case "cpu_strength":
+        case "cpu_strength.bin":
+            struct cpu_strength CpuStrengthData;
+            break;
+        case "damageeff.bin":
+            struct damageeff_bin DamageEffectData;
+            break;
+        case "DictionaryCharacterParam":
+            struct DictionaryCharacterParam DictionaryCharacterData;
+            break;
+        case "DlcInfoParam":
+            struct DlcInfoParam DlcInfoData;
+            break;
+        case "duelPlayerParam":
+            struct duelPlayerParam DuelPlayerData;
+            break;
+        case "ev":
+            struct BattleSoundStruct BattleSoundData;
+            break;
+        case "ev_spl":
+            struct SoundEventStruct CutsceneSoundData;
+            break;
+        case "finalSpSkillCutIn":
+            struct finalSpSkillCutIn FinalSpSkillCutInData;
+            break;
+        case "homeBgParam":
+            struct homeBgParam HomeBgData;
+            break;
+        case "itemCustomizeParam":
+            struct itemCustomizeParam ItemCustomizeData;
+            break;
+        case "iteminfo":
+            struct iteminfo ItemInfoData;
+            break;
+        case "logParam":
+            struct logParam LogData;
+            break;
+        case "stageInfo":
+        case "StageInfo":
+            TStageInfo StageInfo(FTell() + Size);
+            break;
+        case "musicParam":
+            struct musicParam MusicData;
+            break;
+        case "netMenuParam":
+            struct netMenuParam NetMenuData;
+            break;
+        case "nickNameParam":
+            struct nickNameParam NickNameData;
+            break;
+        case "NinjaCardsSkinParam":
+            struct NinjaCardsSkinParam NinjaCardsSkinData;
+            break;
+        case "ninjaInfoCardsParam":
+            struct ninjaInfoCardsParam NinjaInfoCardsData;
+            break;
+        case "optionParam":
+            struct optionParam OptionData;
+            break;
+        case "OugiFinishParam":
+            struct OugiFinishParam OugiFinishData;
+            break;
+        case "playerDoubleEffectParam":
+            struct playerDoubleEffectParam PlayerDoubleEffectData;
+            break;
+        case "playerSettingParam":
+            struct playerSettingParam PlayerSettingData;
+            break;
+        case "privateCamera":
+            struct privateCamera PrivateCameraData;
+            break;
+        case "SkillIndexParam":
+            struct SkillIndexParam SkillIndexData;
+            break;
+        case "SoundEvent":
+            struct SoundEvent SoundEventData;
+            break;
+        case "specialChatParam":
+            struct specialChatParam SpecialChatData;
+            break;
+        case "spTypesupport":
+            struct spTypesupport SpTypeSupportData;
+            break;
+        case "voiceParam":
+            struct voiceParam VoiceData;
+            break;
+        default:
+            // Character-dependent names retain the original suffix priority.
+            if (BinaryIsCharacterParam(chunkName))
+            {
+                struct Pl_AnmStructMain VerBinary;
+            }
+            else if (BinaryEndsWith(chunkName, "prm_sklslot"))
+            {
+                struct ProjectileEntries ProjectileSettings;
+            }
+            else if (BinaryEndsWith(chunkName, "prm_etc"))
+            {
+                struct GeneralMovementEntries MovementSettings;
+            }
+            else if (BinaryEndsWith(chunkName, "prm_hit"))
+            {
+                struct CollisionStruct CollisionSettings;
+            }
+            else if (BinaryEndsWith(chunkName, "prm_load"))
+            {
+                struct PrmLoadSettings Files;
+            }
+            else if (BinaryEndsWith(chunkName, "acc"))
+            {
+                struct AccesoriesSettings AccessoryBySuffix;
+            }
+            else if (BinaryEndsWith(chunkName, "_atk_snd") || BinaryEndsWith(chunkName, "_cut_snd"))
+            {
+                struct SoundEventStruct CutsceenSounds;
+            }
+            else if (BinaryEndsWith(chunkName, "_ev"))
+            {
+                struct BattleSoundStruct BattleSounds;
+            }
+            else
+            {
+                uchar Data[Size];
+            }
+            break;
+    }
+} nuccChunkBinary <optimize=false>;
+
+#endif // NUCC_CHUNK_BINARY_BT

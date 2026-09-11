@@ -1,10 +1,10 @@
 //------------------------------------------------
 //--- 010 Editor v10.0.2 Binary Template
 //
-//      File: nuccChunkAnm.bt
+//      File: nuccChunkPrimitiveVertex.bt
 //   Authors: SutandoTsukai181
-//   Version: 1.0
-//   Purpose: Contains structs for parsing nuccChunks inside Xfbin files
+//   Version: 1.1
+//   Purpose: Vertex storage referenced by nuccChunkModelPrimitiveBatch
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
@@ -14,32 +14,65 @@
 
 #include "/../include.h";
 
+// Evidence: NSUNS3HD_NX 0x71010E6B5C; NSUNS4_107 0x140A792A0.
+// The engine reads EntryCount * EntryLength bytes, then selects conversion
+// by VertexFormat. Vector roles are not established by the parser alone.
+string ReadPrimitiveVertexFormat(u32& value)
+{
+    switch (value)
+    {
+        case 0: return "3 x vec4 + vec2 (56-byte prefix)";
+        case 1: return "2 x vec4 + vec2 (40-byte prefix)";
+        case 2: return "2 x vec4 + vec2 (40-byte prefix)";
+        case 3: return "vec4 + vec2 (24-byte prefix)";
+        case 4: return "4 x vec4 (64-byte prefix)";
+    }
+    return "Unknown format: preserve raw stride";
+}
+
+typedef struct(u32 vertexFormat, u32 stride)
+{
+    local u64 entryStart = FTell();
+    local u32 prefixSize = 0;
+    if (vertexFormat == 0) prefixSize = 56;
+    if (vertexFormat == 1 || vertexFormat == 2) prefixSize = 40;
+    if (vertexFormat == 3) prefixSize = 24;
+    if (vertexFormat == 4) prefixSize = 64;
+
+    if (prefixSize != 0 && stride >= prefixSize)
+    {
+        TVector4 Vector00 <comment="Four float components at entry +0x00; role not yet verified.">;
+        if (vertexFormat != 3)
+        {
+            TVector4 Vector10;
+        }
+        if (vertexFormat == 0 || vertexFormat == 4)
+        {
+            TVector4 Vector20;
+        }
+        if (vertexFormat == 4)
+        {
+            TVector4 Vector30;
+        }
+        else
+        {
+            TVector2 Pair <comment="The final conversion helper swaps two 32-bit components, not a vec4.">;
+        }
+    }
+    if (FTell() < entryStart + stride)
+    {
+        u8 UninterpretedBytes[entryStart + stride - FTell()];
+    }
+} TNuccPrimitiveVertexEntry <optimize=false>;
+
 typedef struct
 {
-    u32 unk1;
-    u32 unk2;
-    u32 EntryLength;
+    u32 Field00 <comment="Copied to runtime metadata; exact semantic meaning remains unknown.">;
+    u32 VertexFormat <read=ReadPrimitiveVertexFormat>;
+    u32 EntryLength <comment="Byte stride, including any uninterpreted tail. Previously ignored by this template.">;
     u32 EntryCount;
-
-    struct{
-        struct{
-            float Position_X;
-            float Position_Y;
-            float Position_Z;
-            FSkip(4);
-            float Normals_X;
-            float Normals_Y;
-            float Normals_Z;
-            FSkip(4);
-            float Tangent_X;
-            float Tangent_Y;
-            float Tangent_Z;
-            float Scale_X;
-            float Scale_Y;
-            float Scale_Z;
-            FSkip(8);
-            
-        }Vertex[EntryCount];  
-    }Vertexes;
-
-} TNuccPrimitiveVertex;
+    Assert(EntryCount == 0 || EntryLength > 0, "Nonempty vertex buffer has zero stride");
+    Assert((u64)EntryCount * EntryLength <= startof(this) + parentof(this).Size - FTell(),
+        "Primitive vertex buffer exceeds chunk payload");
+    TNuccPrimitiveVertexEntry Vertex(VertexFormat, EntryLength)[EntryCount] <optimize=false>;
+} TNuccPrimitiveVertex <optimize=false>;

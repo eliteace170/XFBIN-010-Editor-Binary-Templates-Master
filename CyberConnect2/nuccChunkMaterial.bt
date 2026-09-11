@@ -1,0 +1,76 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkMaterial.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkMaterial data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    // NX nuccChunkMaterial::Parse 0x71010DF6C4: optional fields are presence bits.
+    u16 GroupCount;
+    if ( parentof(this).Version >= 0x61 )
+    {
+        u8 Alpha <comment="Converted to runtime opacity by multiplying by approximately 1/255.">;
+        u8 Field03 <comment="Read as part of the header; no semantic use confirmed here.">;
+        f32 Glare;
+    }
+    if ( parentof(this).Version >= 0x63 )
+        u32 Flags <format=hex, comment="Presence mask: 01/02/04/08 UV blocks, 10 blend pair, 20 falloff, 40 outline.">;
+    else
+        local u32 Flags = 0;
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
+
+    struct
+    {
+        if ( Flags & 0x01 ) { f32 UV0[4]; }
+        if ( Flags & 0x02 ) { f32 UV1[4]; }
+        if ( Flags & 0x04 ) { f32 UV2[4]; }
+        if ( Flags & 0x08 ) { f32 UV3[4]; }
+        if ( Flags & 0x10 )
+        {
+            f32 BlendRate;
+            f32 BlendType;
+        }
+        if ( Flags & 0x20 ) { f32 FallOff; }
+        if ( Flags & 0x40 ) { f32 OutlineID; }
+    } Floats;
+
+    local u32 i, j;
+    for ( i = 0; i < GroupCount; i++ )
+    {
+        struct
+        {
+            u16 TextureCount;
+            u16 Field22 <comment="Read in the eight-byte group header; meaning unverified.">;
+            u32 Field24 <comment="Endian-converted by Parse, but no use established in that method.">;
+    
+            struct TXfbinChunkIndexU32 TextureChunkIndices(PageStartForRead)[TextureCount];
+    
+            if ( exists( Xfbin ) )
+            {
+                struct
+                {
+                    FPush();
+                    {
+                        for ( j = 0; j < TextureCount; j++ )
+                        {
+                            FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
+                                TextureChunkIndices[j].Index,
+                                parentof(parentof(parentof(parentof(this)))).pageStart
+                            )] ) );
+                            struct TChunkMap ChunkMap;
+                        }
+                    }
+                    FPop();
+                } TextureChunks;
+            }
+        } TextureGroup;
+    }
+} TNuccMaterial <optimize=false>;

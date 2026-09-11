@@ -14,39 +14,77 @@
 
 #include "/../include.h";
 
+// IDA: NX Parse 0x71010DB6D4; PC 107 Parse 0x140A829C0.
+// Each two-bit channel mode is 0=absent, 1=one constant, 2=FrameCount samples.
+// Mode 3 is not established by the parser's three-element count table.
+// The named NX GetData* accessors establish channel roles and float widths.
+// Their late-channel offsets disagree with the parser's size expression for
+// some mixed modes. Preserve those tails raw instead of choosing a layout.
+// See IDA_STRUCTURE_CONTEXT.md for the specific discrepancy and addresses.
+int BillboardSampleCount(u32 mode, u16 frameCount)
+{
+    if (mode == 0) return 0;
+    if (mode == 1) return 1;
+    if (mode == 2) return frameCount;
+    return 0;
+}
+
 typedef struct
 {
-    u32 ModelIndex;
-    u32 Flags;
-    u16 FrameCount;
-    u16 Field0A;
-    u32 Field0C;
+    local int64 PayloadStart = FTell();
+    u32 ModelIndex; // Page-local GetIndex reference to the source model.
+    if (parentof(this).Version < 0x64)
+    {
+        u16 LegacyFlags;
+        u16 FrameCount;
+        u32 FrameSize; // Animation ticks per sample (runtime division operand).
+        // NX legacy conversion copies only bits 0..13 into runtime modes.
+        local u32 Flags = LegacyFlags & 0x3FFF;
+    }
+    else
+    {
+        u32 Flags;
+        u16 FrameCount;
+        u16 Field0A; // Not endian-converted or used by the examined parser.
+        u32 FrameSize;
+    }
 
-    local u32 posFlag = (Flags >> 1) & 0x3;
-    local u32 rotFlag = (Flags >> 3) & 0x3;
-    local u32 scaleFlag = (Flags >> 5) & 0x3;
-    local u32 opacityFlag = (Flags >> 7) & 0x3;
-    local u32 uv1Flag = (Flags >> 9) & 0x3;
-    local u32 wh1Flag = (Flags >> 11) & 0x3;
-    local u32 uv2Flag = (Flags >> 13) & 0x3;
-    local u32 wh2Flag = (Flags >> 15) & 0x3;
-    local u32 blendRateFlag = (Flags >> 17) & 0x3;
-    local u32 blendRate2Flag = (Flags >> 19) & 0x3;
-    local u32 glareRateFlag = (Flags >> 21) & 0x3;
-    local u32 alphaRefFlag = (Flags >> 23) & 0x3;
-    local u32 outlineIdFlag = (Flags >> 25) & 0x3;
-
-    if ( posFlag ) { struct TVector3 PositionFrames[FrameCount]; }
-    if ( rotFlag ) { struct TVector3 RotationFrames[FrameCount]; }
-    if ( scaleFlag ) { struct TVector3 ScaleFrames[FrameCount]; }
-    if ( opacityFlag ) { f32 OpacityFrames[FrameCount]; }
-    if ( uv1Flag ) { struct TVector2 Uv1Frames[FrameCount]; }
-    if ( wh1Flag ) { struct TVector2 Wh1Frames[FrameCount]; }
-    if ( uv2Flag ) { struct TVector2 Uv2Frames[FrameCount]; }
-    if ( wh2Flag ) { struct TVector2 Wh2Frames[FrameCount]; }
-    if ( blendRateFlag ) { f32 BlendRateFrames[FrameCount]; }
-    if ( blendRate2Flag ) { f32 BlendRate2Frames[FrameCount]; }
-    if ( glareRateFlag ) { f32 GlareRateFrames[FrameCount]; }
-    if ( alphaRefFlag ) { f32 AlphaRefFrames[FrameCount]; }
-    if ( outlineIdFlag ) { f32 OutlineIdFrames[FrameCount]; }
+    local int Looped = Flags & 1;
+    local int i;
+    local int HasUnknownMode = 0;
+    local int Samples[13];
+    local u32 Mode;
+    for (i = 0; i < 13; i++)
+    {
+        Mode = (Flags >> (1 + 2 * i)) & 3;
+        if (Mode == 3) HasUnknownMode = 1;
+        Samples[i] = BillboardSampleCount(Mode, FrameCount);
+    }
+    // Indices 6..10: BlendRate, BlendRate2, GlareRate, UV2, WH2.
+    local int ConsumerTailBytes = 4 * (Samples[6] + Samples[7] + Samples[8])
+                                + 8 * (Samples[9] + Samples[10]);
+    local int ParserTailBytes = 4 * (Samples[6] + Samples[9] + Samples[10])
+                              + 8 * (Samples[7] + Samples[8]);
+    local int AmbiguousLayout = HasUnknownMode || ConsumerTailBytes != ParserTailBytes;
+    if (AmbiguousLayout)
+    {
+        // Chunk boundary supplies the only reliable bound for these variants.
+        u8 UnresolvedChannelData[parentof(this).Size - (FTell() - PayloadStart)];
+    }
+    else
+    {
+        if (Samples[0]) { struct TVector3 PositionFrames[Samples[0]]; }
+        if (Samples[1]) { f32 RotationFrames[Samples[1]]; }
+        if (Samples[2]) { struct TVector2 ScaleFrames[Samples[2]]; }
+        if (Samples[3]) { f32 OpacityFrames[Samples[3]]; }
+        if (Samples[4]) { struct TVector2 Uv1Frames[Samples[4]]; }
+        if (Samples[5]) { struct TVector2 Wh1Frames[Samples[5]]; }
+        if (Samples[6]) { f32 BlendRateFrames[Samples[6]]; }
+        if (Samples[7]) { f32 BlendRate2Frames[Samples[7]]; }
+        if (Samples[8]) { f32 GlareRateFrames[Samples[8]]; }
+        if (Samples[9]) { struct TVector2 Uv2Frames[Samples[9]]; }
+        if (Samples[10]) { struct TVector2 Wh2Frames[Samples[10]]; }
+        if (Samples[11]) { f32 AlphaRefFrames[Samples[11]]; }
+        if (Samples[12]) { f32 OutlineIdFrames[Samples[12]]; }
+    }
 } TNuccBillboard <optimize=false>;

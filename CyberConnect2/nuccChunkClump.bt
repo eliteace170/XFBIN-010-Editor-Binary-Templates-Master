@@ -1,0 +1,132 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkClump.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkClump data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+
+// Please ignore the incorrect indentation here in favor of having a cleaner git diff
+if ( parentof(this).Version != 0x79 && parentof(this).Version != 0x7A )
+{
+    u8 Data[parentof(this).Size];
+}
+else
+{
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
+
+    // NX nuccChunkClump::Parse 0x71010DBDAC tests mask 2, not equality with 2.
+    u32 Flags <format=hex, comment="Former Field00. Mask 0x02 includes a 28-byte bounding block.">;
+
+    u16 CoordCount;
+    u8  ModelGroupCount <comment="Former CoordFlags[0]; count of following model groups.">;
+    u8  ExtraGroupCount <comment="Former CoordFlags[1]; count of the second group list.">;
+
+    if ( Flags & 2 )
+    {
+        struct
+        {
+            TVector3 BoundsVector0;
+            TVector3 BoundsVector1;
+            u16 Unknown18 <comment="Endian-converted by Parse; semantic use not established.">;
+            u8 Reserved1A[2];
+        } BoundingBox <comment="Former UnkCoords[14]; six FLOAT32 values followed by four bytes.">;
+    }
+
+    s16 CoordNodeParents[CoordCount] <comment="Indices in this clump's coordinate list; negative means no parent.">;
+    struct TXfbinChunkIndexU32 CoordNodeIndices(PageStartForRead)[CoordCount];
+
+    // This only lists the parents, not the node whose parent is listed
+    local int i;
+    struct
+    {
+        local s32 currentIndex;
+        for ( i = 0; i < CoordCount; i++ )
+        {
+            if ( CoordNodeParents[i] >= 0 )
+            {
+                Assert( CoordNodeParents[i] < CoordCount, "Clump parent coordinate index is out of range" );
+                FPush();
+                {
+                    currentIndex = CoordNodeIndices[CoordNodeParents[i]].Index;
+                    FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
+                        currentIndex,
+                        parentof(parentof(parentof(this))).pageStart
+                    )] ) );
+                    struct TChunkMap ChunkMap;
+                }
+                FPop();
+            }
+        }
+    } CoordNodeParentsChunks;
+
+    struct
+    {
+        for ( i = 0; i < CoordCount; i++ )
+        {
+            FPush();
+            {
+                FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
+                    CoordNodeIndices[i].Index,
+                    parentof(parentof(parentof(this))).pageStart
+                )] ) );
+                struct TChunkMap ChunkMap;
+            }
+            FPop();
+        }
+    } CoordNodeIndicesChunks;
+
+    struct TNuccClumpModelGroup ModelGroups[ModelGroupCount] <optimize=false>;
+    struct TNuccClumpModelGroup ExtraGroups[ExtraGroupCount] <optimize=false>;
+
+    if ( parentof(this).Version >= 0x73 )
+    {
+        s16 ExtraValue;
+    }
+
+}
+} TNuccClump <optimize=false>;
+
+typedef struct
+{
+    u16 Count <comment="Number of model references in this group; each reference is four bytes.">;
+    local u32 PageStartForRead = parentof(parentof(parentof(this))).pageStart;
+
+    // The named NX parser always reads an eight-byte group header, including for zero models.
+    {
+        u8 Flags[2];
+
+        f32 LodDistance <comment="Stored group float; LOD interpretation is inherited, not a recovered member name.">;
+        struct TXfbinChunkIndexS32 Indices(PageStartForRead)[Count];
+
+        struct
+        {
+            local s32 currentIndex;
+            for ( i = 0; i < Count; i++ )
+            {
+                // The loader treats -1 as a null model, not as page slot zero.
+                if ( Indices[i].Index >= 0 )
+                {
+                    FPush();
+                    {
+                        currentIndex = Indices[i].Index;
+                        FSeekRel( startof( Xfbin.ChunkTable.ChunkMaps[GetChunkMapIndex(
+                            currentIndex,
+                            parentof(parentof(parentof(parentof(this)))).pageStart
+                        )] ) );
+                        struct TChunkMap ChunkMap;
+                    }
+                    FPop();
+                }
+            }
+        } ModelGroupChunks;
+    }
+} TNuccClumpModelGroup <optimize=false>;

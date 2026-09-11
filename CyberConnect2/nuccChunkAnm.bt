@@ -14,6 +14,14 @@
 
 #include "/../include.h";
 
+// IDA context: NSUNS3HD_NX nuccChunkAnm::Parse @ 0x71010D95E0.
+// Wire sizes come from its read-size switch; original member names are absent.
+// Animation time uses 3000 ticks/second in the examined engine. A 100-tick
+// interval is one sample at 30 FPS, and a 50-tick interval is one at 60 FPS.
+// CurveHeaders precede all curve payloads; each payload is rounded to 4 bytes.
+// Table formats receive FrameSize in runtime memory; that extra word is NOT
+// serialized before their values. See IDA_STRUCTURE_CONTEXT.md for evidence.
+
 typedef struct
 {
     if (parentof(this).Version != 0x78 && parentof(this).Version != 0x66 && parentof(this).Version != 0x68 && parentof(this).Version != 0x79 && parentof(this).Version != 0x7A)
@@ -23,11 +31,11 @@ typedef struct
     else
     {
     //Printf(Str("%s\n", Xfbin.ChunkTable.ChunkNames.ChunkNames[Xfbin.ChunkTable.ChunkMaps[parentof(this).ChunkMapIndex].ChunkNameIndex].Data));
-    u32 AnmLength;
-    u32 FrameSize; //Assert( FrameSize == 0x64 );  // Each frame is 100 units
+    u32 AnmLength; // Duration in animation ticks, not a frame count.
+    u32 FrameSize; // Uniform sample interval in ticks, not a byte count.
 
     u16 EntryCount;
-    u16 LoopFlag;
+    u16 LoopFlag; // Parser retains bit 0 as the looping flag.
     u16 ClumpCount;
     u16 OtherEntryCount;
     u16 OtherIndexCount;
@@ -70,6 +78,8 @@ typedef struct
     }Clumps;
     
 
+    // Two consecutive page-local GetIndex tables. Clump child mappings above
+    // instead use GetExtRefIndex (ClumpIndex does too from version 0x68 onward).
     u32 OtherEntryChunkIndices[OtherEntryCount + OtherIndexCount];
 
     // This is bones parents: first u32 is parent, second u32 is child (or current bone)
@@ -116,7 +126,7 @@ typedef struct
     u16 CurveIndex;
     u16 CurveFormat <read=ReadTAnmCurveFormat>;
     u16 FrameCount;
-    s16 CurveFlags; // Purpose is still unclear; Blender-XFBIN-Importer treats this as signed.
+    s16 CurveFlags; // NX parser endian-converts this word but does not use it here.
 } TCurveHeader <read=ReadTCurveHeader>;
 
 typedef struct
@@ -141,7 +151,6 @@ typedef struct
             {
                 case 0x05:
                 case 0x08:
-                case 0x09:
                 case 0x15:
                 case 0x1A:
                     switch (EntryFormat)
@@ -223,7 +232,6 @@ typedef struct
                     }
                     break;
                 case 0x06:
-                case 0x07:
                     switch (EntryFormat)
                     {
                         case 0x01:
@@ -283,6 +291,15 @@ typedef struct
                             struct TKeyframeVector3 Vector3Keyframes[CurveHeaders[i].FrameCount] <optimize=false>;
                             break;
                     }
+                    break;
+                case 0x07:
+                    // nuccXfbinChunkAnm::KeyVector3Bezier: 40 bytes per key.
+                    struct TKeyframeVector3Bezier BezierKeys[CurveHeaders[i].FrameCount] <optimize=false>;
+                    break;
+                case 0x09:
+                    // EulerInterpolate constructor consumes a 64-byte base matrix.
+                    f32 BaseMatrix[16] <optimize=false>;
+                    struct TKeyframeEulerInterpolate EulerKeys[CurveHeaders[i].FrameCount] <optimize=false>;
                     break;
                 case 0x0A:
                     switch (EntryFormat)
@@ -477,14 +494,10 @@ typedef struct
                     struct TKeyframeFloat Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     break;
                 case 0x0D:
-                    struct TVectorShort Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    struct TVector2 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     break;
                 case 0x0E:
-                    struct TVector3Short Curve[CurveHeaders[i].FrameCount] <optimize=false>;
-                    if (CurveHeaders[i].FrameCount % 2)
-                    {
-                        FSkip(2);
-                    }
+                    struct TKeyframeVector2 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
                     break;
                 case 0x0F:
                     u16 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
@@ -513,14 +526,10 @@ typedef struct
                     break;
                 case 0x19:
                     struct TKeyframeVector3Short Curve[CurveHeaders[i].FrameCount] <optimize=false>;
-                    if (CurveHeaders[i].FrameCount % 2)
-                    {
-                        FSkip(2);
-                    }
                     break;
                 case 0x1D:
-                    struct TVectorShort Curve[CurveHeaders[i].FrameCount] <optimize=false>;
-                    if (CurveHeaders[i].FrameCount % 4)
+                    u16 Curve[CurveHeaders[i].FrameCount] <optimize=false>;
+                    if (CurveHeaders[i].FrameCount % 2)
                     {
                         FSkip(2);
                     }
@@ -588,9 +597,34 @@ typedef struct
 
 typedef struct
 {
-    s16 Frame;
-    struct TVector3 Value;
+    u32 Frame;
+    // The consumer calls nuccFloatCompressor::FLOAT16toFLOAT32 on each code.
+    // Preserve raw codes rather than assuming the other I16 curves' scaling.
+    u16 PackedX;
+    u16 PackedY;
+    u16 PackedZ;
+    u16 Padding;
 } TKeyframeVector3Short <read=ReadTKeyframeVector3Short>;
+
+typedef struct
+{
+    u32 Frame;
+    struct TVector2 Value;
+} TKeyframeVector2;
+
+typedef struct
+{
+    u32 Frame;
+    // Three groups of floats follow the time. Tangent/component roles have
+    // not been independently established; retain a neutral view of the values.
+    f32 BezierValues[9] <optimize=false>;
+} TKeyframeVector3Bezier;
+
+typedef struct
+{
+    u32 Frame;
+    f32 InterpolationValues[4] <optimize=false>;
+} TKeyframeEulerInterpolate;
 
 typedef struct
 {
@@ -601,8 +635,8 @@ typedef struct
 string ReadTKeyframeVector3(TKeyframeVector3& value)
 {
     local string str;
-    SPrintf(str, "%d: %s",
-        value.Frame >= 100 ? value.Frame / 100 : value.Frame,
+    SPrintf(str, "%d ticks: %s",
+        value.Frame,
         TVector3ToString(value.Value));
     return str;
 }
@@ -610,17 +644,16 @@ string ReadTKeyframeVector3(TKeyframeVector3& value)
 string ReadTKeyframeVector3Short(TKeyframeVector3Short& value)
 {
     local string str;
-    SPrintf(str, "%d: %s",
-        value.Frame >= 100 ? value.Frame / 100 : value.Frame,
-        TVector3ToString(value.Value));
+    SPrintf(str, "%u ticks: packed [%04X, %04X, %04X]",
+        value.Frame, value.PackedX, value.PackedY, value.PackedZ);
     return str;
 }
 
 string ReadTKeyframeVector4(TKeyframeVector4& value)
 {
     local string str;
-    SPrintf(str, "%d: %s",
-        value.Frame >= 100 ? value.Frame / 100 : value.Frame,
+    SPrintf(str, "%d ticks: %s",
+        value.Frame,
         TVector4ToString(value.Value));
     return str;
 }
@@ -634,8 +667,8 @@ typedef struct
 string ReadTKeyframeFloat(TKeyframeFloat& value)
 {
     local string str;
-    SPrintf(str, "%d: %.6f",
-        value.Frame >= 100 ? value.Frame / 100 : value.Frame,
+    SPrintf(str, "%d ticks: %.6f",
+        value.Frame,
         value.Value);
     return str;
 }

@@ -1,0 +1,27 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkModelVertex.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkModelVertex data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    u32 NudSize;
+
+    #ifdef NUD
+        FPushBase();
+        {
+            struct TNud Nud;
+        }
+        FPopBase();
+    #else
+        u8 Data[NudSize];
+    #endif
+} TNuccModelVertex;

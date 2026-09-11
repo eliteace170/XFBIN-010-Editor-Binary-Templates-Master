@@ -1,0 +1,57 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkModelHit.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkModelHit data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+typedef struct
+{
+    struct Header
+    {
+       u32 MeshCount;
+       u32 TotalTriangleCount <comment="Former FileSize. Used to allocate polygon records; not a byte size.">;
+
+    } HitHeader <bgcolor=0xc01b7b>;
+    
+    
+    local int i, j;
+    for (i = 0; i < HitHeader.MeshCount; i++)
+    {
+        struct VertexSection
+        {
+            struct MeshHeader
+            {
+                u32 TriangleCount <comment="Former MeshVertexSize. Each triangle consumes three XYZ float32 vertices (36 bytes).">;
+                u32 PolygonFlags <format=hex, comment="Passed to nuccModelHitDataPolygon::SetData; bit meanings unverified.">;
+
+                if ( parentof(parentof(parentof(this))).Version >= 0x7A )
+                {
+                    u32 PolygonFlags2 <format=hex, comment="Additional argument to SetData from version 0x7A.">;
+                    u32 Reserved0C;
+                }
+
+            } meshHeader;
+
+            for (j = 0; j < meshHeader.TriangleCount * 0x3; j++)
+            {
+                struct TNuccHitTriangleVertex
+                {
+                    f32 x;
+                    f32 y;
+                    f32 z;
+                } vertex <bgcolor=0xFFDF35>;
+            }
+
+
+        } Mesh <bgcolor=0xFFCF36>;
+    
+    }
+                       
+} TNuccModelHit;

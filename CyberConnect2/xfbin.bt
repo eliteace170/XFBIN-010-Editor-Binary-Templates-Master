@@ -3,13 +3,14 @@
 //
 //      File: xfbin.bt
 //   Authors: SutandoTsukai181
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Parse CC2 Xfbin files
 //  Category: 
 // File Mask: *.xfbin
 //  ID Bytes: 4E 55 43 43
 //   History: 
 //   1.0 - Initial release
+
 //------------------------------------------------
 
 #define XFBIN
@@ -36,7 +37,7 @@ typedef struct
 
     BigEndian();
 
-    u32 FileId;
+    u32 FileId <comment="Container format revision. Distinct from each chunk's Version.">;
     u32 Padding[2] <hidden=true>;
     Assert( Padding[0] == 0 && Padding[1] == 0 );
 
@@ -96,8 +97,7 @@ typedef struct
         FSkip( 4 - ( FTell() % 4 ) );
     }
 
-    Assert( ChunkMapSize % ChunkMapCount == 0 );
-    Assert( ChunkMapSize / ChunkMapCount / 4 == 3 );
+    Assert( (u64)ChunkMapSize == (u64)ChunkMapCount * 12, "Chunk map records must be 12 bytes" );
 
     SetBackColor( chunkMapColor );
     struct TChunkMap ChunkMaps[ChunkMapCount];
@@ -106,7 +106,7 @@ typedef struct
     struct TChunkReference ChunkReferences[ChunkReferenceCount];
 
     SetBackColor( chunkMapIndicesColor );
-    u32 ChunkMapIndices[ChunkMapIndicesCount];
+    u32 ChunkMapIndices[ChunkMapIndicesCount] <comment="Page-local reference slots map through this array to global ChunkMaps.">;
 
 } TChunkTable <optimize=false>;
 
@@ -124,8 +124,8 @@ typedef struct
 
 typedef struct
 {
-    u32 ChunkNameIndex;
-    u32 ChunkMapIndex;
+    u32 ChunkNameIndex <read=ReadChunkNameIndex>;
+    u32 ChunkMapIndex <comment="Global ChunkMaps index; unlike references inside chunk payloads, do not add pageStart.">;
 } TChunkReference <read=ReadTChunkReference>;
 
 typedef struct( u32 currentPageStart, u32 currentReferenceStart )
@@ -135,6 +135,7 @@ typedef struct( u32 currentPageStart, u32 currentReferenceStart )
 
     do
     {
+        Assert( FileSize() - FTell() >= 12, "Page has no terminating nuccChunkPage header" );
         struct TChunk Chunk;
         Assert( sizeof(Chunk) == Chunk.Size + 0xC );
         ++chunkCount;
@@ -142,6 +143,8 @@ typedef struct( u32 currentPageStart, u32 currentReferenceStart )
 
     local u32 pageSize = Chunk.NuccPage.PageSize;
     local u32 referenceSize = Chunk.NuccPage.ReferenceSize;
+    Assert( (u64)pageStart + pageSize <= Xfbin.ChunkTable.ChunkMapIndicesCount, "Page index count exceeds the chunk-map index table" );
+    Assert( (u64)currentReferenceStart + referenceSize <= Xfbin.ChunkTable.ChunkReferenceCount, "Page reference count exceeds the reference table" );
 
     if ( referenceSize )
     {
@@ -159,10 +162,14 @@ typedef struct
 {
     SetBackColor( chunkColor );
 
-    u32 Size;
-    u32 ChunkMapIndex;
-    u16 Version;
-    u16 Field0A;
+    // NX nuccXfbinParser::ParseChunk 0x71011418B4: 12-byte header, then exactly Size payload bytes.
+    u32 Size <comment="Payload byte count, excluding this 12-byte header.">;
+    u32 ChunkMapIndex <comment="Page-local slot: ChunkMapIndices[pageStart + this value] selects a global ChunkMap.">;
+    u16 Version <format=hex, comment="Payload layout revision passed to the chunk's Parse method; not a game number.">;
+    u16 Field0A <comment="Read with the header; no semantic use established in the inspected ParseChunk method.">;
+    local int64 payloadStart = FTell();
+    local int64 payloadEnd = payloadStart + Size;
+    Assert( payloadEnd <= FileSize(), "Chunk payload extends beyond the file" );
 
     FPush();
     {
@@ -177,7 +184,8 @@ typedef struct
     local string chunkName = ReadChunkNameIndex( ChunkMap.ChunkNameIndex );
     local string chunkType = ReadChunkTypeIndex( ChunkMap.ChunkTypeIndex );
 
-    // Completely avoid chunks with an unsupported version for now
+    // Empty chunks can be references/placeholders. Individual parsers handle their own version gates.
+    if ( Size > 0 )
     switch ( ReadChunkTypeIndex( ChunkMap.ChunkTypeIndex ) )
     {
         case "nuccChunkPage":
@@ -185,14 +193,12 @@ typedef struct
             break;
         case "nuccChunkAnm":
             struct TNuccAnm NuccAnm;
-            u8 Data[Size - (exists(NuccAnm) ? sizeof(NuccAnm) : 0)];
             break;
         case "nuccChunkTexture":
             struct TNuccTexture NuccTexture;
             break;
         case "nuccChunkFont":
             struct TnuccFont NuccFont;
-            u8 Data[Size - (exists(NuccFont) ? sizeof(NuccFont) : 0)];
             break;
         case "nuccChunkDynamics":
             struct TNuccDynamics NuccDynamics;
@@ -211,11 +217,9 @@ typedef struct
             break;
         case "nuccChunkBillboard":
             struct TNuccBillboard NuccBillboard;
-            u8 Data[Size - (exists(NuccBillboard) ? sizeof(NuccBillboard) : 0)];
             break;
         case "nuccChunkAnmStrm":
             struct TNuccAnmStrm NuccAnmStrm;
-            u8 Data[Size - (exists(NuccAnmStrm) ? sizeof(NuccAnmStrm) : 0)];
             break;
         case "nuccChunkAnmStrmFrame":
             struct {
@@ -227,35 +231,27 @@ typedef struct
             break;
         case "nuccChunkParticle":
             struct TNuccParticle NuccParticle;
-            u8 Data[Size - (exists(NuccParticle) ? sizeof(NuccParticle) : 0)];
             break;
         case "nuccChunkTrail":
             struct TNuccTrail NuccTrail;
-            u8 Data[Size - (exists(NuccTrail) ? sizeof(NuccTrail) : 0)];
             break;
         case "nuccChunkPrimitiveVertex":
             struct TNuccPrimitiveVertex NuccPrimitiveVertex;
-            u8 Data[Size - (exists(NuccPrimitiveVertex) ? sizeof(NuccPrimitiveVertex) : 0)];
             break;
         case "nuccChunkModelPrimitiveBatch":
             struct TNuccModelPrimitiveBatch NuccModelPrimitiveBatch;
-            u8 Data[Size - (exists(NuccModelPrimitiveBatch) ? sizeof(NuccModelPrimitiveBatch) : 0)];
             break;
         case "nuccChunkModel":
             struct TNuccModel NuccModel;
-            u8 Data[Size - (exists(NuccModel) ? sizeof(NuccModel) : 0)];
             break;
         case "nuccChunkMorphModel":
             struct TNuccMorphModel NuccMorphModel;
-            u8 Data[Size - (exists(NuccMorphModel) ? sizeof(NuccMorphModel) : 0)];
             break;
         case "nuccChunkModelVertex":
             struct TNuccModelVertex NuccModelVertex;
-            u8 Data[Size - (exists(NuccModelVertex) ? sizeof(NuccModelVertex) : 0)];
             break;
         case "nuccChunkNub":
             struct TNuccNub NuccNub;
-            u8 Data[Size - (exists(NuccNub) ? sizeof(NuccNub) : 0)];
             break;
         case "nuccChunkBinary":
             { 
@@ -268,6 +264,10 @@ typedef struct
             break;
     }
 
+    Assert( FTell() <= payloadEnd, "Chunk parser consumed more bytes than the payload Size" );
+    if ( FTell() < payloadEnd )
+        u8 UnparsedData[payloadEnd - FTell()] <comment="Uninterpreted payload tail. Preserved without assigning an unsupported field meaning.">;
+
     local string readString = "";
 } TChunk <optimize=false, read=ReadTChunk>;
 
@@ -278,6 +278,9 @@ typedef struct
 
 u32 GetChunkMapIndex( u32 index, u32 pageStart )
 {
+    // NX nuccXfbinParser::GetIndex 0x7101140D24 performs these two levels of indirection.
+    Assert( (u64)pageStart + index < Xfbin.ChunkTable.ChunkMapIndicesCount, "Page-local chunk index is out of range" );
+    Assert( Xfbin.ChunkTable.ChunkMapIndices[pageStart + index] < Xfbin.ChunkTable.ChunkMapCount, "Global chunk-map index is out of range" );
     return Xfbin.ChunkTable.ChunkMapIndices[pageStart + index];
 }
 

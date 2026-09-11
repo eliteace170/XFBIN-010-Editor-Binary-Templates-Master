@@ -1,7 +1,7 @@
 //------------------------------------------------
 //--- 010 Editor v13.0.1 Binary Template
 //
-//      File: characterSelectParam
+//      File: duelPlayerParam (Storm 4)
 //   Authors: Hydra
 //   Version: 1.0
 //   Purpose: 
@@ -10,6 +10,46 @@
 //  ID Bytes: 
 //   History: 
 //------------------------------------------------
+
+// Storm 4: NSUNS4_107.i64, ccGetPlayerFlagParam at 0x1405297D4.
+// Bit numbers are zero-based. Unknown does not mean unused by the game.
+// Counts below refer only to the supplied 269-entry Evo asset.
+typedef enum <uint>
+{
+    PF_None = 0,
+    PF_ThrowFall = 0x00000001, // bit 0
+    PF_KeepDouble = 0x00000002, // bit 1
+    PF_RenderToggle = 0x00000004, // bit 2
+    PF_Puppet = 0x00000008, // bit 3
+    PF_PuppetOwner = 0x00000010, // bit 4
+    PF_AnimAttachment = 0x00000020, // bit 5
+    PF_FinishRunStop = 0x00000040, // bit 6
+    PF_FinishAwakeRunStop = 0x00000080, // bit 7
+    PF_DefaultSubstitution = 0x00000100, // bit 8
+    PF_Unknown09 = 0x00000200, // bit 9
+    PF_BaseGlare = 0x00000400, // bit 10
+    PF_AwakeGlare = 0x00000800, // bit 11
+    PF_WarpDash = 0x00001000, // bit 12
+    PF_DodgeDraw = 0x00002000, // bit 13
+    PF_Unknown14 = 0x00004000, // bit 14
+    PF_AwakeEvents = 0x00008000, // bit 15
+    PF_HugeAwake = 0x00010000, // bit 16
+    PF_HugeCamera = 0x00020000, // bit 17
+    PF_HugeFootSound = 0x00040000, // bit 18
+    PF_AwakeHitmark = 0x00080000, // bit 19
+    PF_NoDamageTurn = 0x00100000, // bit 20
+    PF_DirectionDamage = 0x00200000, // bit 21
+    PF_Unknown22 = 0x00400000, // bit 22
+    PF_EndAwakeOnDefeat = 0x00800000, // bit 23
+    PF_AwakeSkill = 0x01000000, // bit 24
+    PF_Unknown25 = 0x02000000, // bit 25
+    PF_Unknown26 = 0x04000000, // bit 26
+    PF_Unknown27 = 0x08000000, // bit 27
+    PF_Unknown28 = 0x10000000, // bit 28
+    PF_Unknown29 = 0x20000000, // bit 29
+    PF_Unknown30 = 0x40000000, // bit 30
+    PF_Unknown31 = 0x80000000, // bit 31
+} TDppFlags;
 
 typedef struct
 {
@@ -32,12 +72,128 @@ struct{
         }costumes[20]<optimize=false, read= Str("%s" + "bod1",costume_name)>;
     }awake_costumes;
     char partner[8];
-    struct{
-        ubyte ChakraDashCondition;
-        ubyte AwakeningCondition1; //some other conditions
-        ubyte AwakeningCondition2; //giant awakenings, ground effects, hitmarks, big chakra effect and etc
-        ubyte AwakeningJutsuName;
+    // +0x150 from MotionCode (+0x154 including FileSize): one LE uint32.
+    // Value and Bits alias the SAME four bytes. Set a bit to enable its predicate.
+    // The former AwakeningJutsuName byte was bits 24-31, not a name/ID.
+    local int dppPreviousBitDirection = IsBitfieldLeftToRight();
+    BitfieldRightToLeft();
+    union{
+        TDppFlags Value <format=hex>;
+        struct{
+            // For THROW_SUCCESS_ATTACKER, resets velocity/gravity and movement state during cleanup; on animation end
+            // sets zero gravity and requests FALL rather than NUT. Seen in 2nrt/2nrv. Specific throw handling, not a
+            // general air-throw enable. S4 code: 1407A3CB4. Set in 2/269 supplied entries.
+            uint ThrowFall : 1; // bit 0, 0x00000001
+            // Skips ResetDoubleState when ending the direction-attack/throw action. Seen in 2ten/8ten. Exact visual
+            // role of double state requires further tracing. S4 code: 1407A3CB4. Set in 2/269 supplied entries.
+            uint KeepDouble : 1; // bit 1, 0x00000002
+            // Clears a subdraw/clump byte during creation, costume break, awakening model changes and several
+            // character-specific paths. The cleared field is not named in this database; do not label it as a specific
+            // visual feature yet. S4 code: 14076DA1C, 14056FA08. Set in 31/269 supplied entries.
+            uint RenderToggle : 1; // bit 2, 0x00000004
+            // Returned by IsPuppetCharacter. S4 code: 14079759C. Set in 5/269 supplied entries.
+            uint Puppet : 1; // bit 3, 0x00000008
+            // IsPuppetController requires this flag and not currently awakened. IsPuppetOwner checks the flag without
+            // that awakening restriction. S4 code: 1407975B0, 14079766C. Set in 6/269 supplied entries.
+            uint PuppetOwner : 1; // bit 4, 0x00000010
+            // During animation changes, tests whether the animation chunk name contains the motion characode. Disables
+            // attachment slot 1 if it does, enables slot 1 otherwise. Present in code but unset in this asset. S4
+            // code: 1407752A8. Set in 0/269 supplied entries.
+            uint AnimAttachment : 1; // bit 5, 0x00000020
+            // Suppresses the early transition to neutral when forward speed falls below 1; run-stop still exits on
+            // animation end. This bit applies in normal and awakened states. S4 code: 1407AED54. Set in 7/269 supplied
+            // entries.
+            uint FinishRunStop : 1; // bit 6, 0x00000040
+            // Same suppression as bit 6, but only while awakened. Animation end still permits the neutral transition.
+            // S4 code: 1407AED54. Set in 26/269 supplied entries.
+            uint FinishAwakeRunStop : 1; // bit 7, 0x00000080
+            // Forces a selected dodge/substitution value to 0 during player creation and dodge-skill selection checks.
+            // Observed on Rock Lee/Mifune-related motion codes. This does not disable substitution itself. S4 code:
+            // 140749738, 1407BCDEC, 1407BD058. Set in 5/269 supplied entries.
+            uint DefaultSubstitution : 1; // bit 8, 0x00000100
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 21/269 supplied entries.
+            uint Unknown09 : 1; // bit 9, 0x00000200
+            // Prevents this helper from forcing the model glare coefficient to zero while not awakened or while using
+            // instant awakening. It preserves glare; it does not set a glow intensity. S4 code: 14077791C. Set in
+            // 6/269 supplied entries.
+            uint BaseGlare : 1; // bit 10, 0x00000400
+            // Prevents the same zeroing while truly awakened. Player state UNKNOWN_17A8 == 2 bypasses the helper
+            // independently. S4 code: 14077791C. Set in 44/269 supplied entries.
+            uint AwakeGlare : 1; // bit 11, 0x00000800
+            // IsEnableChakraDashWarp requires both awakening and this bit. Also affects post-dodge positioning while
+            // in the warp chakra-dash action. S4 code: 1407A7774, 1407D7AD0. Set in 3/269 supplied entries.
+            uint WarpDash : 1; // bit 12, 0x00001000
+            // IsDisableDrawAtDodge returns false only when awakened AND this bit is set; otherwise true. The enum name
+            // suggests the opposite polarity, so preserve this exact predicate. Likely prevents the usual dodge hide
+            // while awakened; final rendering should be tested in-game. S4 code: 1407C9FF8. Set in 66/269 supplied
+            // entries.
+            uint DodgeDraw : 1; // bit 13, 0x00002000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 5/269 supplied entries.
+            uint Unknown14 : 1; // bit 14, 0x00004000
+            // For motion modes 1 or 9, skips normal prm_mot/prm_skl/prm_spl event setup. The prm_awa setup is
+            // separately executed for those modes. This is more precise than ENABLE AWAKENING MOVESET; it does not
+            // independently create a moveset. S4 code: 1407F6608. Set in 87/269 supplied entries.
+            uint AwakeEvents : 1; // bit 15, 0x00008000
+            // Used by IsAwakeWithSuperArmorCharacter and IsHugeAwakeCharacter when player AwakeType is not 1.
+            // IsHugeAwakeNow additionally requires the awakening condition group. It is a classification flag, not a
+            // model-size setting. S4 code: 1407971EC, 140797438, 140797458. Set in 42/269 supplied entries.
+            uint HugeAwake : 1; // bit 16, 0x00010000
+            // IsHugeAwakeNowForCamera requires this bit, an active awakening condition group and AwakeType != 1. This
+            // is not a generic enable-private-camera switch. S4 code: 1407974A8. Set in 42/269 supplied entries.
+            uint HugeCamera : 1; // bit 17, 0x00020000
+            // When awakened and queried for sound type 6, selects column 7 of the surface sound table instead of
+            // column 2. It changes a particular foot/landing sound lookup, not every movement sound. S4 code:
+            // 140792EDC. Set in 20/269 supplied entries.
+            uint HugeFootSound : 1; // bit 18, 0x00040000
+            // Attacker must be awakened; the flag gates the skill-slot hitmark/damage-decoration path. It does not
+            // enable every hit effect universally. S4 code: 14077A818 and character-specific overrides. Set in 8/269
+            // supplied entries.
+            uint AwakeHitmark : 1; // bit 19, 0x00080000
+            // While awakened, blocks the normal damage-facing turn even if IsEnableTurnDamageNormal permits it.
+            // Applies within additional damage-attribute checks. S4 code: 1407A12EC and character-specific overrides.
+            // Set in 3/269 supplied entries.
+            uint NoDamageTurn : 1; // bit 20, 0x00100000
+            // IsAwakeChangeNotDirectionDamage returns this bit while truly awakened. Wall-battle states independently
+            // force that predicate true; instant awakening returns false. Also used in character-specific damage
+            // action selection. S4 code: 140796FE8, 1407818E4. Set in 50/269 supplied entries.
+            uint DirectionDamage : 1; // bit 21, 0x00200000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 200/269 supplied entries.
+            uint Unknown22 : 1; // bit 22, 0x00400000
+            // On defeat, clears awakening conditions, ends awakening and its gauge, and triggers transition effects.
+            // DMG_HELL_ACTION is excluded. Battle-end code also uses it for a color-conversion effect. S4 code:
+            // 1407C52DC, 1406CF308, 1406C5798. Set in 73/269 supplied entries.
+            uint EndAwakeOnDefeat : 1; // bit 23, 0x00800000
+            // IsPlayerFlagParamAwakeSkill uses this bit; Orochimaru (2orc) with current skill number 1 is an explicit
+            // exception. Also used in current-skill attack-priority selection. The awakening skill number comes from a
+            // separate parameter at +0x164. S4 code: 1407B04B0, 14079602C. Set in 140/269 supplied entries.
+            uint AwakeSkill : 1; // bit 24, 0x01000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 4/269 supplied entries.
+            uint Unknown25 : 1; // bit 25, 0x02000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 43/269 supplied entries.
+            uint Unknown26 : 1; // bit 26, 0x04000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 8/269 supplied entries.
+            uint Unknown27 : 1; // bit 27, 0x08000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 0/269 supplied entries.
+            uint Unknown28 : 1; // bit 28, 0x10000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 0/269 supplied entries.
+            uint Unknown29 : 1; // bit 29, 0x20000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 0/269 supplied entries.
+            uint Unknown30 : 1; // bit 30, 0x40000000
+            // No direct caller of the two flag accessors using this bit was found. This is not proof that the game
+            // never reads it. Game usage unresolved; do not assume unused. Set in 0/269 supplied entries.
+            uint Unknown31 : 1; // bit 31, 0x80000000
+        }Bits;
     }conditions;
+    if (dppPreviousBitDirection) BitfieldLeftToRight();
     FSkip(12);
     struct{
 

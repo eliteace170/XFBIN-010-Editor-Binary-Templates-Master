@@ -14,7 +14,10 @@
 
 #include "/../include.h";
 
-//BigEndian();
+// IDA context: NSUNS3HD_NX, nuccChunkAnmStrm_Parse @ 0x710002A784.
+// The 20-byte header and mapping tables mirror nuccChunkAnm. References inside
+// clumps use GetExtRefIndex; the two "other" tables use page-local GetIndex.
+// Names describe reconstructed wire roles, not original C++ member names.
 typedef struct
 {
     u32 Offset;
@@ -22,22 +25,23 @@ typedef struct
 } TStrmFrameInfo <read=ReadTStrmFrameInfo>;
 
 typedef struct {
+    local u16 chunkVersion = parentof(this).Version;
+    u32 AnmLength; // Animation time units; nuccAnmTimePerSec = 3000 in this build.
+    u32 FrameSize; // Time step between stream frames, not a byte size.
     
-    u32 AnmLength;
-    u32 FrameSize;
-    
-    u16 EntryCount;
+    u16 EntryCount; // Number of 8-byte seek-table entries at the end of this chunk.
     u16 Looped;
     
     u16 ClumpCount;
     u16 OtherEntryCount;
     
 
-    u32 CoordCount;
+    u16 OtherIndexCount;
+    u16 CoordCount;
 
     local int i;
 
-    local int FrameCount = FrameSize != 0 ? AnmLength / FrameSize : 0;
+    local int FrameCount = EntryCount; // Parser reads 8 * EntryCount bytes.
     struct{
     for (i = 0; i < ClumpCount; i++)
         {
@@ -48,13 +52,17 @@ typedef struct {
                 u16 ModelCount;
                 u32 BoneMaterialIndices[BoneMaterialCount];
                 u32 ModelIndices[ModelCount];
-                u32 Padding[ModelCount];
+                if (chunkVersion >= 0x75)
+                {
+                    u32 ModelReserved[ModelCount]; // Read and discarded from v0x75 onward.
+                }
     
             } Clump;
         }
     }Clumps;
 
     u32 OtherEntryChunkIndices[OtherEntryCount];
+    u32 OtherChunkIndices[OtherIndexCount];
 
 // This is bones parents: first u32 is parent, second u32 is child (or current bone)
     struct TCoordParent CoordParents[CoordCount];
@@ -70,7 +78,7 @@ typedef struct {
     
     
 
-} TNuccAnmStrm;
+} TNuccAnmStrm <optimize=false>;
 
 string ReadTStrmFrameInfo(TStrmFrameInfo& value)
 {

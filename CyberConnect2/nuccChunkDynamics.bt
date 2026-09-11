@@ -1,0 +1,99 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: nuccChunkDynamics.bt
+//   Authors: SutandoTsukai181
+//   Version: 1.0
+//   Purpose: Parse nuccChunkDynamics data inside Xfbin files
+//   History:
+//   1.0 - Split from nucc.bt; field layout and behavior preserved
+//------------------------------------------------
+
+#include "/../include.h"
+
+string ReadDynamicsColliderFlags(u16 value)
+{
+    local string str;
+    if ( value & 1 )
+        SPrintf(str, "0x%04X: inverse hit / selected groups", value);
+    else
+        SPrintf(str, "0x%04X: ordinary ellipsoid", value);
+    if ( value & 0xFFFE ) str += " (unknown bits set)";
+    return str;
+}
+
+// Secondary skeletal motion: nuccCdSpringCtrl builds springs from the clump
+// hierarchy and attaches nuccCdHitElp ellipsoids to its coords. Field names below
+// describe verified operations, not recovered source member names.
+// Layout: NSUNS3HD_NX nuccChunkDynamics::Parse, 0x71010DD3D0.
+// Float consumers: NX InitParam 0x710115432C; Storm 4 107 InitParam 0x140AA80B0.
+typedef struct
+{
+    local u16 DynamicsVersion = parentof(this).Version;
+    local u32 PageStartForRead = parentof(parentof(this)).pageStart;
+    u16 SpringGroupsCount;
+    u16 CollisionEllipsoidsCount <comment="Formerly CollisionSpheresCount; each volume has independent XYZ axis scales.">;
+
+    // The version belongs to the enclosing chunk header, not this payload.
+    if ( DynamicsVersion >= 0x68 )
+    {
+        u32 ClumpChunkIndex <read=ReadTXfbinChunkIndexU32(this, parentof(parentof(parentof(this))).pageStart), comment="Page-local chunk reference to the clump; absent before version 0x68.">;
+    }
+
+    local int i, bonesCount = 0;
+    for ( i = 0; i < SpringGroupsCount; i++ )
+    {
+        struct
+        {
+            f32 MotionRetention <comment="Formerly Bounciness. Multiplies retained motion once per inertia update; lower values remove more previous motion.">;
+            f32 LengthCorrection <comment="Formerly Elasticity. Scales correction proportional to rest length minus current segment length.">;
+            f32 ReferenceAttraction <comment="Formerly Stiffness. Pulls toward the animated reference endpoint; terminal tails use a continuation target.">;
+            if ( DynamicsVersion >= 0x67 )
+            {
+                f32 SimulatedMotionWeight <comment="Formerly Movement. Additional reference pull uses 1-value. Values outside (0,1] become 1 in the engine; zero does not disable dynamics.">;
+            }
+            // <=0x66 has three floats (16-byte record); the loader supplies
+            // SimulatedMotionWeight=1. >=0x67 has four floats (20-byte record).
+            s16 RootCoordIndex <comment="Formerly CoordIndex. Index into the clump's coord array, not a chunk-map index. The runtime follows the skeleton hierarchy from this root.">;
+            s16 BonesCount <comment="Signed nonnegative count contributing to the final per-node flag table; not a flat contiguous coord range.">;
+            Assert( BonesCount >= 0 );
+            bonesCount += BonesCount;
+        } SpringGroup;
+    }
+
+    for ( i = 0; i < CollisionEllipsoidsCount; i++ )
+    {
+        struct
+        {
+            // Offset and axis scale are local to the attached coord. Ordinary
+            // hit testing transforms into normalized ellipsoid space.
+            f32 OffsetX <comment="Local translation of the ellipsoid relative to its attached coord.">;
+            f32 OffsetY;
+            f32 OffsetZ;
+            f32 ScaleX <comment="Local ellipsoid axis scale before the attached coord transform; XYZ values need not match.">;
+            f32 ScaleY;
+            f32 ScaleZ;
+
+            s16 CoordIndex <comment="Index into the clump's coord array, not the XFBIN chunk map.">;
+            u16 ColliderFlags <read=ReadDynamicsColliderFlags(this), comment="Formerly AttachSpringGroupFlag. Bit 0 selects the inverse-hit list and target groups. Other bits are not identified.">;
+
+            if ( DynamicsVersion >= 0x69 )
+            {
+                s16 LegacySpringGroupIndex <comment="Formerly Unk. Additional target spring-group index when collider bit 0 is set; -1 means no legacy target.">;
+                u16 UnknownReserved <format=hex, comment="Formerly Padding2. The reader consumes this word but does not copy it into the runtime collider; preserve it.">;
+            }
+            // <=0x68: 28-byte fixed record, legacy group defaults to -1.
+            // >=0x69: 32-byte fixed record. Lists start only at version 0x71.
+            if ( DynamicsVersion >= 0x71 && (ColliderFlags & 1) )
+            {
+                u16 AttachedSpringGroupsCount;
+                u16 SpringGroupIndex[AttachedSpringGroupsCount] <comment="Indices into this Dynamics chunk's SpringGroup records. The runtime appends its own 0xFFFF terminator; it is not stored here.">;
+            }
+        } CollisionEllipsoid;
+    }
+
+    // Flags are serialized after ALL ellipsoids and their interleaved lists.
+    // The builder consumes them in group/node traversal order. File bits clear
+    // the corresponding runtime enable bits, rather than enabling those effects.
+    u16 SpringBonesFlags[bonesCount] <format=hex, comment="0x1 skips selected node collision passes, including inverse-hit correction; not all collisions or animation. 0x2 suppresses external-vector Z in node prediction. Other bits are unknown.">;
+} TNuccDynamics <optimize=false>;

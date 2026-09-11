@@ -1,0 +1,251 @@
+//------------------------------------------------
+//--- 010 Editor v15.0.2 Binary Template
+//
+//      File: stageinfo.bin
+//   Authors: 
+//   Version: 32 bit 
+//   Purpose: parsing the stage entries
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+BigEndian();
+int32 filesize; //whole file minus the first 4 bytes of the file
+
+int32 filettypeVersion;
+int32 StageEntryCount; //total amount of stage entries in the array. each entry is 304 bytes in size
+int32 padding;
+
+
+local int Pos;
+local int i;
+local int j;
+local int p;
+local int m;
+
+for (i = 0; i < StageEntryCount; i++)
+{
+    struct
+    {
+    // nested strings locations and names
+    
+    int32 StageNameOffset; //turn into int64
+    Pos = FTell();
+    FSeek(Pos + StageNameOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+    string StageName;
+    FSeek(Pos);
+    
+   // int32 StageMessageOffset; //turn into int64
+   /// Pos = FTell();
+   // FSeek(Pos + StageMessageOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+    //string StageMessage;
+   // FSeek(Pos);
+    
+    /* we add this entry 8 bytes off padding
+    
+    int64 MusicMessageOffset;
+    Pos = FTell();
+    FSeek(Pos + MusicMessageOffset - 8);
+    string MusicMessage;
+    FSeek(Pos);
+    */
+    
+    int32 filecount; //turn into int64
+    int32 filecountOffset; //turn into int64
+    
+    local int filecountPos = FTell(); // <-- SAVE position in the binary file 
+            
+    FSeek(filecountPos + filecountOffset - 4); // becomes (filecountPos + filecountOffset - 8) after 64 bit conversion
+    
+    for (j = 0; j < filecount; j++)
+    {
+        struct
+            {
+                // nested strings locations and names
+                int32 filecountStringOffset; //turn into int64
+                Pos = FTell();
+                FSeek(Pos + filecountStringOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+                string FileCountString;
+                FSeek(Pos);
+                //
+            }
+        FileStringOffsets<read = FileCountString, optimize = false>; //nested structure containing the nested string address offsets 
+    }
+    
+    FSeek(filecountPos); // return to possition in the binary file 
+    
+    int32 objectcount; //turn into int64
+    int32 objectcountOffset; //turn into int64
+    
+    local int ObjectCountPos = FTell(); // <-- SAVE position of int32 objectcountOffset in binrary since we have to jump to pointers again
+    
+    FSeek(ObjectCountPos + objectcountOffset - 4); // becomes (ObjectCountPos + objectcountOffset - 8) after 64 bit conversion
+    
+    for (m = 0; m < objectcount; m++)
+    {
+        
+        struct
+        {
+        
+            // nested strings locations and names
+            
+            
+            
+            int32 objectpathOffset; //turn into int64
+            Pos = FTell();
+            FSeek(Pos + objectpathOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+            string objectpathString;
+            FSeek(Pos);
+            
+            int32 objectnameOffset; //turn into int64
+            Pos = FTell();
+            FSeek(Pos + objectnameOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+            string objectnameString;
+            FSeek(Pos);
+                    
+            int32 objectpossitionPathOffset; //turn into int64
+            Pos = FTell();
+            FSeek(Pos + objectpossitionPathOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+            string objectpossitionPathString;
+            FSeek(Pos); 
+            
+            int32 objectpossitionStringOffset; //turn into int64
+            Pos = FTell();
+            FSeek(Pos + objectpossitionStringOffset - 4); // becomes (Pos + "Offset" - 8) after 64 bit conversion
+            string objectpossitionString;
+            FSeek(Pos); 
+            
+            
+            
+            int32 objectType; // leave as int32
+            float unk56; // leave as int32
+            int32 HideMesh; // leave as int32
+            float animationSpeed; // leave as int32
+            
+            /* missing section
+            add the follwing section and pad it with zeros between int32 RigidBody; and int32 unk30;
+            64 bytes of padding
+            
+                int64 unk2;
+                
+                // nested string location and name
+                int64 BreakableObejectOffset;
+                Pos = FTell();
+                FSeek(Pos + BreakableObejectOffset - 8);
+                string BreakableObejectString;
+                FSeek(Pos);
+                //
+                
+                for (p = 0; p < 3; p++)
+                {
+                    struct
+                    {
+                        // nested strings locations and names
+                        int64 BreakableObejectEffectOffset;
+                        Pos = FTell();
+                        FSeek(Pos + BreakableObejectEffectOffset - 8);
+                        string BreakableObejectEffectString;
+                        FSeek(Pos);
+                        //
+                        
+                        float ObejectanimationSpeed;
+                        int32 unk3; // leave as int32
+                    }
+                    BreakableObejectEffects<read = BreakableObejectEffectString, optimize = false>;
+                }
+            */
+           
+            int32 unk300;
+            int32 unk300;
+            int32 unk30; // leave as int32
+            int32 unk4; // leave as int32
+            
+           
+            
+          
+           
+            
+        }
+        objectcountOffsets<read = objectnameString, optimize = false>; // each entry is a fixed 176 bytes in size in a nested structure which contain multiple pointer addresses to nested strings
+       
+    }
+     
+    FSeek(ObjectCountPos); // return to possition int32 objectcountOffset; 
+    
+    int32  stageweather; // leave as int32
+    float  S2_PlayerAmbientColor;
+    float  S2_RayCutoffColorShade;
+    float  S2_EffectAmbientColor;
+    float  S2_unkColor1;
+    
+    /* missing entries values:
+    
+    36 bytes of padding between float  unkColor1; and float ParallelAmbientColor;
+    
+    int32 BrightnessContrast;
+    float  BrightnessCorrection;
+    float  ContrastCorrection;
+    int32 enableLenFlare;
+    int32 LensFlareType;
+    float  LensFlareXpos;
+    float  LensFlareYpos;
+    float  LensFlareZpos;
+    float  LensFlareAlpha;
+    */
+    
+    float S2_ParallelAmbientColor;
+    float S2_RayCutoffNormalColor;
+    float S2_LightPointX;
+    float S2_LightPointY;
+    float S2_LightPointZ;
+    float S2_EnableShadowColor; // leave as int32
+    
+    
+    
+    
+    
+    
+    float PlayerAmbientColor;
+    float RayCutoffColorShade; // leave as int32
+    float EffectAmbientColor;
+    float unkColor1;
+    float ParallelAmbientColor;
+    float RayCutoffNormalColor;
+    float  LightPointX;
+    float  LightPointY;
+    float  LightPointZ;
+    
+    
+    float  ShadowColor;
+    
+    
+    float  unkColor2;
+    
+    float  unkColor3;
+    
+    
+    float  unkColor9;
+    
+    
+    float  FogColor;
+    
+    float  unkColor5;
+    float  unkColor6;
+    float  unkColor7;
+    
+    
+    
+    float  unkColor8;
+    float  unkColor9;
+    float  unkColor10;
+    float  unkColor11;
+    
+    float  Color;
+   
+   
+    
+    
+    }
+    StageInfoEntries<read = StageName, optimize = false>; 
+}

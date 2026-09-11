@@ -1,0 +1,317 @@
+#ifndef STAGEINFO_BT
+#define STAGEINFO_BT
+
+//------------------------------------------------
+// 010 Editor v15 Binary Template
+// File: stageinfoS4.bt
+// Purpose: StageInfo version 1010 (64-bit offsets).
+// Run on StageInfo.bin.xfbin or its nuccChunkBinary payload, including the size word.
+// Records: stage = 0x130 bytes; object = 0xB0 bytes; near area = 0x10 bytes.
+// All offsets are signed and relative to the OFFSET FIELD, not the record or file.
+// The size word is big-endian; the StageInfo data is little-endian.
+//
+// IDA sources: NSUNS4_107, NSUNSC.exe, NSUNS3HD_NX (ns3 symbols).
+// S4 14080C47C / SC 140A2A330: relocation and record sizes.
+// S4 14080BAA0 / SC 140A28FE0: lighting and post-effect conversion.
+// SC 140A2E280, 141F95060: object parameter copy and type dispatch.
+// NX supplies names, NOT offsets: its version 1009 has smaller records.
+// "Unknown" means unresolved. "Unused" is limited to the named consumer/build.
+//------------------------------------------------
+
+typedef enum <int32> { Off = 0, On = 1 } TStageToggle;
+typedef enum <int32> { Clear = 0, Snow = 1, Rain = 2 } TStageWeather;
+typedef enum <int32>
+{
+    StageClump = 0, StageAnm = 1, Clump2 = 2, Animation2 = 3,
+    Tree = 4, GrassLow = 5, GrassHigh = 6,
+    BreakGimmick = 7, ActionGimmick = 8, ContactGimmick = 9,
+    PhysicsClump = 10, BreakAnimation = 11
+} TStageObjectType;
+typedef enum <int32>
+{
+    Style0 = 0, Style1 = 1, Style2 = 2,
+    Style3 = 3, Style4 = 4, Style5 = 5
+} TStageFlare; // Preset IDs observed in this file; visual preset names unresolved.
+
+local int64 stageStart;
+local int64 stageEnd;
+local int stageObjects = 0;
+local int stageFiles = 0;
+local int stageNearAreas = 0;
+local int stageLoads = 0;
+
+void StageRange(int64 pos, int64 size)
+{
+    Assert(pos >= stageStart && pos <= stageEnd && size >= 0 && size <= stageEnd - pos,
+           "StageInfo reference or count extends outside the binary payload");
+}
+
+// A reference keeps its 8-byte size after reading the editable string elsewhere.
+// Zero is displayed as an empty reference. The game's relocation helper actually
+// returns the field's own address for zero; it is not a universal null-pointer rule.
+typedef struct
+{
+    local int64 refStart = FTell();
+    int64 Offset;
+    local int64 refEnd = FTell();
+    if (Offset != 0)
+    {
+        StageRange(refStart + Offset, 1);
+        FSeek(refStart + Offset);
+        local int64 textEnd = FTell();
+        while (textEnd < stageEnd && ReadUByte(textEnd) != 0) textEnd++;
+        Assert(textEnd < stageEnd, "Unterminated StageInfo string");
+        string Text;
+        FSeek(refEnd);
+    }
+} TStageString <read=ReadStageString, optimize=false>;
+
+string ReadStageString(TStageString &v)
+{
+    if (exists(v.Text)) return v.Text;
+    return "";
+}
+
+// nuccCOLOR::SetRGBA takes 0xRRGGBBAA. Little-endian disk bytes are A, B, G, R.
+// These were previously floats; each channel can now be edited independently.
+typedef struct { uchar A, B, G, R; } TStageColor <read=ReadStageColor, bgcolor=StageColor>;
+string ReadStageColor(TStageColor &v)
+{
+    local string s;
+    SPrintf(s, "R:%u G:%u B:%u A:%u", v.R, v.G, v.B, v.A);
+    return s;
+}
+int StageColor(TStageColor &v) { return (uint32)v.R | ((uint32)v.G << 8) | ((uint32)v.B << 16); }
+
+typedef struct
+{
+    TStageString StageName;
+    float Height; // Transition board height: NX GetStageChangeBoardSizeH, +8.
+    float Width;  // Transition board width: NX GetStageChangeBoardSizeW, +12.
+} TStageNearArea <read=ReadStageNearArea, optimize=false>;
+string ReadStageNearArea(TStageNearArea &v) { return ReadStageString(v.StageName); }
+
+typedef struct
+{
+    local int64 objectStart = FTell();
+    TStageString ObjectPath <comment="Resource XFBIN path.">; // +00
+    TStageString ObjectName <comment="Clump/animation chunk name.">; // +08
+    TStageString PositionPath <comment="XFBIN containing the coordinate chunk.">; // +10
+    TStageString PositionName <comment="Coordinate chunk; resolved with the parent transform.">; // +18
+    TStageObjectType ObjectType <comment="Types 2/3 use the same creators as 0/1.">; // +20
+    float AnimationSpeed <comment="Animation playback multiplier; also used for the _after animation of type 11.">; // +24
+    TStageToggle Cull <comment="Former HideMesh: camera-based fading/culling, not unconditional hiding. Clump creation also skips its normal collision entry when nonzero.">; // +28
+    TStageToggle RigidBody <comment="Type 10: creates physics for matching *before* model parts.">; // +2C
+    int32 RigidOption <comment="Former unk2: passed to the rigid-body creation parameters. Exact option unresolved.">; // +30
+    uint32 Padding34 <comment="Unused by SC's stage-object parameter copy; alignment.">; // +34
+    TStageString EffectPath <comment="Former BreakableObject: shared XFBIN for type 11's three effect animations.">; // +38
+    TStageString BreakEffect <comment="Type 11: effect at the object's position when broken.">; // +40
+    float BreakEffectScale <comment="Type 11: uniform XYZ effect scale, NOT animation speed. The same scalar is supplied to all three vector components.">; // +48
+    uint32 Padding4C <comment="Unused by SC's stage-object parameter copy.">; // +4C
+    TStageString HitEffect <comment="Type 11: effect at the supplied hit position.">; // +50
+    float HitEffectScale <comment="Type 11: uniform XYZ effect scale, NOT animation speed. The same scalar is supplied to all three vector components.">; // +58
+    uint32 Padding5C <comment="Unused by SC's stage-object parameter copy.">; // +5C
+    TStageString AfterEffect <comment="Type 11: effect started after the break animation finishes.">; // +60
+    float AfterEffectScale <comment="Type 11: uniform XYZ effect scale, NOT animation speed. The same scalar is supplied to all three vector components.">; // +68
+    TStageToggle RandomPlay <comment="Animation replay with random waits. This is NOT effect-array padding.">; // +6C
+    int32 WaitMin <comment="RandomPlay: inclusive minimum wait; 30-Hz frame units in NX.">; // +70
+    int32 WaitMax <comment="Exclusive maximum: min + Rand() % (max-min). Used only when max > min.">; // +74
+    TStageString WallEffect <comment="Gimmick effect/animation name, loaded from ObjectPath (types 7/8/9).">; // +78
+    int32 BreakCondition <comment="Type 7: break-state threshold/selector. Exact gameplay meaning unresolved; observed 0/2.">; // +80
+    TStageToggle WallMode <comment="Type 7: enables wall-specific behavior and allows creation when ordinary gimmicks are disabled. The wall-mode constructor overrides its runtime BreakCondition with 1.">; // +84
+    TStageString WallState1 <comment="Type 7: replacement clump/animation for the first selected wall state.">; // +88
+    TStageString WallState2 <comment="Type 7: replacement clump/animation for the next selected wall state.">; // +90
+    float GimmickScale <comment="Type 8: uniform XYZ scale of the action-gimmick clump. Former WallVolume; this is spatial scale, not sound volume.">; // +98
+    uint32 Padding9C <comment="Unused by SC's stage-object parameter copy.">; // +9C
+    TStageString Sound <comment="Gimmick sound cue name; resolved through the sound manager.">; // +A0
+    int32 SoundFrame <comment="Former low half of unk8: sound trigger frame; -1 disables timed playback. SC converts it using 3000 * frame / the runtime frame-rate value.">; // +A8
+    int32 UnknownAC <comment="Copied separately to creation parameters. No consumer identified; not proven unused.">; // +AC
+    Assert(FTell() == objectStart + 0xB0, "Incorrect StageInfo object size");
+    stageObjects++;
+} TStageObject <read=ReadStageObject, optimize=false>;
+string ReadStageObject(TStageObject &v) { return ReadStageString(v.ObjectName); }
+
+typedef struct
+{
+    local int64 entryStart = FTell();
+    TStageString StageName <comment="Stage ID used for manager lookups.">; // +00
+    TStageString StageMessage <comment="Stage display-message key.">; // +08
+    TStageString MusicMessage <comment="Music string/key; empty in many entries.">; // +10
+    int32 FileCount <comment="Number of resource paths. The engine consumes 32 bits.">; // +18
+    uint32 Padding1C <comment="Count alignment; not read as part of the count.">; // +1C
+    int64 FilesOffset <comment="Relative to this field; array of 8-byte string references.">; // +20
+    int32 ObjectCount <comment="Number of 0xB0-byte object records.">; // +28
+    uint32 Padding2C <comment="Count alignment; not read as part of the count.">; // +2C
+    int64 ObjectsOffset <comment="Relative to this field.">; // +30
+    TStageWeather Weather <comment="Creates snow or rain; other values do not select either traced weather path.">; // +38
+
+    // Lighting. Colors are packed RGBA, not floats. Familiar color names retained
+    // where their precise lighting/shader role has not yet been independently resolved.
+    TStageColor PlayerAmbientColor <comment="Converted to the stage-light color block.">; // +3C
+    TStageColor RayCutoffColorShade <comment="Converted to the stage-light color block; exact shader role unresolved.">; // +40
+    TStageColor EffectAmbientColor <comment="Converted to the stage-light color block.">; // +44
+    TStageColor UnknownColor1 <comment="Former unkColor1: RGBA, copied to runtime. Exact lighting target unresolved.">; // +48
+    TStageToggle BrightnessContrast <comment="Enables brightness/contrast adjustment.">; // +4C
+    float BrightnessCorrection <comment="Brightness adjustment parameter.">; // +50
+    float ContrastCorrection <comment="Contrast adjustment parameter.">; // +54
+    TStageToggle EnableLensFlare <comment="Enables the lens-flare setup.">; // +58
+    TStageFlare LensFlareType <comment="Flare preset ID; named styles not recovered.">; // +5C
+    float LensFlareX <comment="Flare source X.">; // +60
+    float LensFlareY <comment="Flare source Y.">; // +64
+    float LensFlareZ <comment="Flare source Z.">; // +68
+    float LensFlareAlpha <comment="Flare opacity.">; // +6C
+    TStageColor ParallelAmbientColor <comment="Converted to the stage-light color block.">; // +70
+    TStageColor RayCutoffNormalColor <comment="Converted to the stage-light color block; exact shader role unresolved.">; // +74
+    float LightX <comment="Light vector: loader negates X/Y/Z before storing the runtime direction.">; // +78
+    float LightY <comment="Not an absolute point position; former LightPointY.">; // +7C
+    float LightZ <comment="Former LightPointZ.">; // +80
+    TStageToggle EnableShadowColor <comment="Shadow parameter enable.">; // +84
+    TStageColor ShadowColor <comment="Packed shadow tint.">; // +88
+
+    TStageToggle EnableFog <comment="Enables distance fog.">; // +8C
+    float FogNear <comment="Former unkColor2: nuccFogParam::SetDistNear.">; // +90
+    float FogFar <comment="Former unkColor3: nuccFogParam::SetDistFar.">; // +94
+    float FogAmount <comment="Former unkColor4: far fog clamp, nuccFogParam::SetClampFar.">; // +98
+    TStageColor FogColor <comment="Fog tint, including alpha.">; // +9C
+    TStageToggle EnableMonoFilter <comment="Color conversion, reset to the engine's mono mode (3.0).">; // +A0
+    float MonoCb <comment="Former unkColor5: YCbCr Cb (blue chroma), NOT an RGB channel.">; // +A4
+    float MonoCr <comment="Former unkColor6: YCbCr Cr (red chroma).">; // +A8
+    float MonoAlpha <comment="Former unkColor7: filter blend/alpha.">; // +AC
+    TStageToggle EnableGlare <comment="Glare/bloom enable.">; // +B0
+    float GlareParam1 <comment="Bright-pass shader param.x; likely extraction threshold, exact equation unresolved.">; // +B4
+    float GlareParam2 <comment="Bright-pass shader param.y; exact extraction control unresolved.">; // +B8
+    float GlareStrength <comment="Multiplies the combined blurred glare contributions.">; // +BC
+    float CelShade <comment="Former unkColor11: cel-shading parameter, NOT a fourth glare value or integer flag.">; // +C0
+    TStageToggle SoftFocus <comment="Soft-focus post effect enable.">; // +C4
+    float SoftFocusAmount <comment="Former Color: scalar soft-focus control, not packed color.">; // +C8
+    TStageToggle EnableDoF <comment="Former unk9: depth-of-field enable.">; // +CC
+    float FocusDistance <comment="DoF focus-distance parameter.">; // +D0
+    float DoFNear <comment="DoF near bound.">; // +D4
+    float DoFFar <comment="DoF far bound.">; // +D8
+    float DoFBlur <comment="DoF blur amount; script setter clamps this to 0..1.">; // +DC
+    TStageToggle DoFNoEdgeBlur <comment="Former unk10: stored as integer 0/1 in this asset. Keep those raw encodings. Renderer API receives this slot as a float zero/nonzero edge-blur control; NX SetParameter(7) enables edge blur for zero. Wire type is inferred from the asset.">; // +E0
+    TStageToggle EnableSunShaft <comment="Enables sun shafts.">; // +E4
+    float SunNear <comment="Sun-shaft near distance.">; // +E8
+    float SunFar <comment="Sun-shaft far distance.">; // +EC
+    float SunStrength <comment="Maximum blend rate in percent: loader multiplies by 0.01.">; // +F0
+    TStageColor SunColor <comment="Former unkColor17: packed sun-shaft tint.">; // +F4
+    float SunX <comment="World-space sun source position; SetSunshaftsPos, not a unit direction.">; // +F8
+    float SunY <comment="Sun source Y.">; // +FC
+    float SunZ <comment="Sun source Z.">; // +100
+    float BlurWidth <comment="Sun-shaft blur width.">; // +104
+    float SunAttenuation <comment="SetSunshaftsFallOffScale: distance falloff scale.">; // +108
+    TStageColor UnknownColor2 <comment="Former unkColor18: RGBA copied to runtime +0x170. Consumer unresolved.">; // +10C
+
+    int32 NearAreaCount <comment="Nearby-stage transition boards; unused in this asset (all counts zero), USED by the game.">; // +110
+    uint32 Padding114 <comment="Count alignment.">; // +114
+    int64 NearAreasOffset <comment="Array of {relative name, float height, float width}.">; // +118
+    int32 LoadStageCount <comment="Additional stage IDs to preload; zero in this asset, USED by the game.">; // +120
+    uint32 Padding124 <comment="Count alignment.">; // +124
+    int64 LoadStagesOffset <comment="Array of 8-byte string references.">; // +128
+    Assert(FTell() == entryStart + 0x130, "Incorrect StageInfo entry size");
+
+    // Parse children, then restore the fixed record end so the next entry stays aligned.
+    Assert(FileCount >= 0 && ObjectCount >= 0 && NearAreaCount >= 0 && LoadStageCount >= 0,
+           "Negative StageInfo count");
+    if (FileCount > 0)
+    {
+        StageRange(entryStart + 0x20 + FilesOffset, (int64)FileCount * 8);
+        FSeek(entryStart + 0x20 + FilesOffset);
+        TStageString Files[FileCount] <optimize=false>;
+        stageFiles += FileCount;
+    }
+    if (ObjectCount > 0)
+    {
+        StageRange(entryStart + 0x30 + ObjectsOffset, (int64)ObjectCount * 0xB0);
+        FSeek(entryStart + 0x30 + ObjectsOffset);
+        TStageObject Objects[ObjectCount] <optimize=false>;
+    }
+    if (NearAreaCount > 0)
+    {
+        StageRange(entryStart + 0x118 + NearAreasOffset, (int64)NearAreaCount * 0x10);
+        FSeek(entryStart + 0x118 + NearAreasOffset);
+        TStageNearArea NearAreas[NearAreaCount] <optimize=false>;
+        stageNearAreas += NearAreaCount;
+    }
+    if (LoadStageCount > 0)
+    {
+        StageRange(entryStart + 0x128 + LoadStagesOffset, (int64)LoadStageCount * 8);
+        FSeek(entryStart + 0x128 + LoadStagesOffset);
+        TStageString LoadStages[LoadStageCount] <optimize=false>;
+        stageLoads += LoadStageCount;
+    }
+    FSeek(entryStart + 0x130);
+} TStageEntry <read=ReadStageEntry, optimize=false>;
+string ReadStageEntry(TStageEntry &v) { return ReadStageString(v.StageName); }
+
+typedef struct(int64 payloadLimit)
+{
+    stageStart = FTell();
+    stageEnd = payloadLimit;
+    stageObjects = 0;
+    stageFiles = 0;
+    stageNearAreas = 0;
+    stageLoads = 0;
+    StageRange(stageStart, 20);
+    BigEndian();
+    uint32 FileSizeBytes; // Binary size excluding this big-endian 4-byte word.
+    Assert(FileSizeBytes >= 16 && FileSizeBytes <= stageEnd - stageStart - 4, "Invalid StageInfo binary size");
+    stageEnd = stageStart + 4 + FileSizeBytes;
+    LittleEndian();
+    uint32 Version;
+    Assert(Version == 1010, "This template requires StageInfo version 1010 (304-byte stages, 176-byte objects)");
+    int32 StageEntryCount;
+    int64 EntriesOffset; // Former padding/padding2: self-relative stage-array pointer (normally 8).
+    Assert(StageEntryCount >= 0, "Negative StageInfo stage count");
+    StageRange(stageStart + 12 + EntriesOffset, (int64)StageEntryCount * 0x130);
+    FSeek(stageStart + 12 + EntriesOffset);
+    if (StageEntryCount > 0) TStageEntry StageInfoEntries[StageEntryCount] <optimize=false>;
+    FSeek(stageEnd);
+    Printf("StageInfo v%u: %d stages, %d files, %d objects, %d near areas, %d preload stages.\n",
+           Version, StageEntryCount, stageFiles, stageObjects, stageNearAreas, stageLoads);
+} TStageInfo <optimize=false>;
+
+#ifndef XFBIN
+// Locate the binary in a whole XFBIN, or start directly at the selected payload.
+// Walk chunk headers, not raw magic-byte searches. This does not change xfbin.bt.
+BigEndian();
+stageStart = FTell();
+stageEnd = FileSize();
+Assert(stageEnd - stageStart >= 20, "StageInfo header is truncated");
+if (ReadUInt(stageStart) == 0x4E554343)
+{
+    Assert(stageEnd - stageStart >= 68, "XFBIN header is truncated");
+    local int64 chunkPos = stageStart + 28 + ReadUInt(stageStart + 16)
+                         + (int64)ReadUInt(stageStart + 64) * 8;
+    local int64 found = -1;
+    local int64 foundEnd = 0;
+    local int64 chunkSize;
+    Assert(chunkPos >= stageStart + 68 && chunkPos <= stageEnd, "Invalid XFBIN chunk table size");
+    while (chunkPos < FileSize())
+    {
+        Assert(FileSize() - chunkPos >= 12, "Truncated XFBIN chunk header");
+        BigEndian();
+        chunkSize = ReadUInt(chunkPos);
+        Assert(chunkSize <= FileSize() - chunkPos - 12, "Truncated XFBIN chunk");
+        if (chunkSize >= 20 && ReadUInt(chunkPos + 12) == chunkSize - 4)
+        {
+            LittleEndian();
+            if (ReadUInt(chunkPos + 16) == 1010)
+            {
+                Assert(found < 0, "Multiple version-1010 binaries; run on the desired binary payload selection");
+                found = chunkPos + 12;
+                foundEnd = found + chunkSize;
+            }
+        }
+        chunkPos += 12 + chunkSize;
+    }
+    Assert(found >= 0, "No version-1010 StageInfo binary found in this XFBIN");
+    FSeek(found);
+    stageStart = found;
+    stageEnd = foundEnd;
+}
+
+TStageInfo StageInfo(stageEnd);
+#endif
+
+#endif // STAGEINFO_BT
