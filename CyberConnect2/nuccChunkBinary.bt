@@ -170,6 +170,7 @@ typedef struct
             struct DlcInfoParam DlcInfoData;
             break;
         case "duelPlayerParam":
+        case "duelPlayerParam.bin":
             struct duelPlayerParam DuelPlayerData;
             break;
         case "ev":
@@ -247,6 +248,10 @@ typedef struct
             if (BinaryIsCharacterParam(chunkName))
             {
                 struct Pl_AnmStructMain VerBinary;
+            }
+            else if (BinaryEndsWith(chunkName, "prm_bas") || BinaryEndsWith(chunkName, "prm_bas.bin"))
+            {
+                struct duelPlayerParam DuelPlayerData;
             }
             else if (BinaryEndsWith(chunkName, "prm_sklslot"))
             {

@@ -3,13 +3,626 @@
 //
 //      File: duelPlayerParam (Storm 4)
 //   Authors: Hydra
-//   Version: 1.0
-//   Purpose: 
+//   Version: 1.3
+//   Purpose: S4/Evo field map with S3 and Connections evidence; unknowns remain explicit.
 //  Category: 
 // File Mask: 
 //  ID Bytes: 
 //   History: 
 //------------------------------------------------
+
+// Cross-reference audit (2026-09-12): NSUNS4_107.i64, NSUNS3HD_NX.i64 (ns3), NSUNSC.exe.i64.
+// Offsets below start at MotionCode, after the BE size word. Core scalars are LE.
+// S4 and Connections copy 0x2D8 bytes; the supplied Evo file has 0x2F8 bytes.
+// S3 uses 0x3F0 bytes, version 103, with different offsets and flag numbering.
+// Equivalent readers are evidence of a role, not proof every game's behavior matches.
+// Unresolved does not mean unused. See the generated cross_reference.json/RESEARCH.md.
+//
+// Complete byte map and cross-game context:
+// +0x000 [8 bytes] MotionCode (char[8]; confirmed). Eight-byte motion characode buffer. Used by motion-code
+// lookup; do not treat it as an arbitrary variable-length string. Evidence: 140528A9C S3: +0x000; 7100B98FE4.
+// Matching reader role. Connections: +0x000; 1405699E0. Matching offset and reader role.
+//
+// +0x008 [160 bytes] Costumes (char[20][8]; confirmed). 20 model characodes, eight bytes per slot; used for
+// normal model lookup. Evidence: 140528A50 S3: +0x008; 7100B98D1C. Matching reader role. S3 has ten base costume
+// slots; S4 has twenty. Connections: +0x008; 140569990. Matching offset and reader role.
+//
+// +0x0A8 [160 bytes] AwakeCostumes (char[20][8]; confirmed). 20 awakening model characodes, eight bytes per
+// slot. Lookup includes character/costume exceptions. Evidence: 14052894C S3: +0x058; 7100B99004. Matching
+// reader role. S3 has ten awakening costume slots; S4 has twenty. Connections: +0x0A8; 1405697E0. Matching
+// offset and reader role.
+//
+// +0x148 [8 bytes] Partner (char[8]; confirmed). Partner characode string, resolved through the player parameter
+// manager; not an integer pointer on disk. Evidence: 1405288E8, 1407FA084 S3: +0x0A8; 7100B99C30. Matching
+// reader role. Connections: +0x148; 140569520. Matching offset and reader role.
+//
+// +0x150 [4 bytes] Flags (uint32; partial). 32-bit little-endian flag mask. 22 bit behaviors traced, some
+// partial; 10 unresolved. Full per-bit evidence is in the linked flags report. Evidence: 1405297D4, 1407976D8
+// S3: +0x0B0; 7100B992D4. Matching reader role. Bit numbering differs; see the per-bit map. Connections: +0x150;
+// 14056B970, 140980D10. Matching offset and reader role.
+//
+// +0x154 [8 bytes] EvoCustom (byte[8]; custom). Eight bytes used by the existing custom setEvo1/EvoDup editor
+// feature. No stock-S4 semantic claim is made; preserve both halves and the existing serialization. The generic
+// flag accessor can address subsequent words at +0x154/+0x158/+0x15C for indexes >=32, but no such index was
+// recovered; that arithmetic does not establish additional flag meanings. Evidence:
+// Tool_DuelPlayerParamEditor.cs S3: No verified counterpart. Storm 3 offsets and flag numbers must not be copied
+// into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x15C [4 bytes] Unknown15C (__int32; unresolved). All supplied records contain zero. No confirmed stock-game
+// consumer; preserve these four bytes. It is addressable arithmetically as flag word 3 for indexes 96..127, but
+// no such caller was recovered. Direct +0x15C hits in player movement refer to player-object state, not
+// automatically to the parameter record. Evidence: S4 1405297D4, 1407976D8 and fresh offset/flag-caller audit
+// S3: No verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x160 [4 bytes] AwakePriority (int; confirmed). Indexed parameter 0. Positive values replace awakening
+// attack/body priority on awakening entry; ordinary priority is restored on exit. Observed -1, 301, 390.
+// Evidence: 14052982C, 1407D686C, 1407D52B0 S3: +0x0C0; 7100B99340, 7100C11AE8. Matching reader role.
+// Connections: +0x160; 14056B9D0, 1409DB200. Matching offset and reader role.
+//
+// +0x164 [4 bytes] AwakeSkill (int; confirmed). Indexed parameter 1. Default awakening skill number; separate
+// from flag bit 24. The helper has character/state-dependent paths. Observed -1 and 0. Evidence: 1407BDB4C,
+// 14052982C S3: +0x0C4; 7100B99340, 7100BF1980. Matching reader role. Connections: +0x164; 14056B9D0, 1409B62F0.
+// Matching offset and reader role.
+//
+// +0x168 [4 bytes] JobType (int; partial). Indexed parameter 2. Negative values normalize to 0. Pause-menu
+// filtering: type 0 excludes sys_free_command_039; type 1 excludes sys_free_command_018. Broader meaning of the
+// category is unresolved. Fresh direct/wrapper audits still find a command-list role rather than a combat-state
+// switch. Only 3mfn has value 1 in the supplied asset. This correlation alone does not prove a general Samurai
+// class or enable samurai abilities. Evidence: 140528AE4, 1406536B4; S3 7100D4B488; Connections 140731F00,
+// 140732F40 S3: +0x0C8; 7100B9A60C. Matching reader role. Connections: +0x168; 140569BE0. Matching offset and
+// reader role.
+//
+// +0x16C [4 bytes] Unknown16C (int; unresolved). Indexed integer slot 3. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0CC; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x170 [4 bytes] Unknown170 (int; unresolved). Indexed integer slot 4. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0D0; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x174 [4 bytes] Unknown174 (int; unresolved). Indexed integer slot 5. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0D4; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x178 [4 bytes] Unknown178 (int; unresolved). Indexed integer slot 6. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0D8; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x17C [4 bytes] FemaleAnims (int; confirmed). Indexed parameter 7. Exactly 1 invokes ConvertWomanAnm for
+// selected damage and support-rescue animation IDs; other values leave those IDs unchanged. Evidence: 140779658,
+// 1407770B4 S3: +0x0DC; 7100B99340. Same indexed integer slot only; matching semantics not established.
+// Connections: +0x17C; 140955870. Matching offset and reader role.
+//
+// +0x180 [4 bytes] Unknown180 (int; unresolved). Indexed integer slot 8. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0E0; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x184 [4 bytes] Unknown184 (int; unresolved). Indexed integer slot 9. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0E4; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x188 [4 bytes] Unknown188 (int; unresolved). Indexed integer slot 10. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0E8; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x18C [4 bytes] Unknown18C (int; unresolved). Indexed integer slot 11. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0EC; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x190 [4 bytes] Unknown190 (int; unresolved). Indexed integer slot 12. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0F0; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x194 [4 bytes] Unknown194 (int; unresolved). Indexed integer slot 13. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0F4; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x198 [4 bytes] Unknown198 (int; unresolved). Indexed integer slot 14. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0F8; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x19C [4 bytes] Unknown19C (int; unresolved). Indexed integer slot 15. All supplied records contain -1. A
+// fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only
+// for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a
+// traced consumer is not proof of unused storage. Evidence: S4 14052982C, 140796E90 and their caller exports; S3
+// 7100B99340 and callers S3: +0x0FC; 7100B99340. Same indexed integer slot only; matching semantics not
+// established. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this
+// slot.
+//
+// +0x1A0 [4 bytes] DefaultSupportType (__int32; confirmed). Default support class copied during adventure battle
+// setup into +0x0C of a 0x3C-byte team-member record. S4 IsAttackTypeSupport tests that member class for 0. S3
+// establishes the legacy class names: 0 Attack, 1 Defense, 2 Balance. S4 effects for classes 1/2 are not
+// established by this trace; this field does not select its separate Strike Back/Dash Cut/etc. support actions.
+// Evidence: S4 14052062C, 14073BC98, 1407DFD64; S3 7100959010, 7100AC5100, 7100C24DF4; table 71031042E0 S3:
+// +0x100 is the matching default support class. InitSelectSupportType reads it and GetDefaultSupportTypeCursor
+// validates -1..2. GetAutoSupportActionTbl indexes 71031042E0: 0 -> autoSupportATK (71031041F4), 1 ->
+// autoSupportDEF (710310421C), 2 -> autoSupportBALANCE (7103104244). Connections: Same 0x2D8-byte core copied by
+// 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x1A4 [8 bytes] Support1 (char[8]; confirmed). First default support characode. Used by character-select
+// default support panels. Evidence: 140647CC4 S3: No verified counterpart. Storm 3 offsets and flag numbers must
+// not be copied into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not
+// established for this slot.
+//
+// +0x1AC [8 bytes] Support2 (char[8]; confirmed). Second default support characode. Empty strings occur.
+// Evidence: 140647CC4 S3: No verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x1B4 [2 bytes] Height (__int16; confirmed). Signed 16-bit height converted to float by GetHeight. Used in
+// collision/camera/effect positioning; not a dedicated victory-camera distance. Evidence: 14079697C, 140794738,
+// 14073FC74 S3: +0x114; 7100BCD8D8. Matching reader role. Connections: +0x1B4; 14097EE30. Matching offset and
+// reader role.
+//
+// +0x1B6 [2 bytes] Unknown1B6 (__int16; unresolved). Signed 16-bit-looking populated field adjacent to Height
+// and VictoryHeight; no confirmed consumer. Do not call it a camera Y coordinate or declare it unused. The
+// deeper cross-game scan establishes no semantic getter. S3 places end-demo height directly after height, so it
+// supplies no matching intervening short. Evidence: S4/Connections direct-displacement and basic-parameter
+// reader audits; S3 7100BCD8D8, 7100BCD90C S3: No corresponding slot between S3 Height (+0x114) and
+// EnddemoHeight (+0x116). S4 inserted this populated short; its role remains unresolved. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x1B8 [2 bytes] VictoryHeight (__int16; confirmed). Signed 16-bit value converted to float, cached by the
+// end-demo controller, then used as a vertical target offset and in camera-distance calculations. It is a
+// framing height, not an angle. Evidence: 1407969A8, 1406B590C, 1406B5048, 1406B5300 S3: +0x116; 7100BCD90C.
+// Matching reader role. Connections: +0x1B8; 14097EE60. Matching offset and reader role.
+//
+// +0x1BA [2 bytes] BodyRadius (__int16; confirmed). Radius passed to the body collision sphere and used by
+// smash-hit updates. Evidence: 140791650, 1407927CC S3: +0x118; 7100BC65EC. Matching reader role. Connections:
+// +0x1BA; 140976CB0. Matching offset and reader role.
+//
+// +0x1BC [2 bytes] DamageRadius (__int16; confirmed). Radius used for both the damage and atemi collision-sphere
+// groups (three spheres in each reset path). Evidence: 1407915B8, 1407916C0 S3: +0x11A; 7100BC655C. Matching
+// reader role. Connections: +0x1BC; 140976C10, 140976D20. Matching offset and reader role.
+//
+// +0x1BE [2 bytes] ParamVersion (__int16; confirmed). Signed 16-bit parameter format version, not a collision or
+// camera setting. Connections checks this same offset against 110; S3 checks +0x11C against 103. S4_107 copies
+// the field but has no corresponding diagnostic check. Evidence: S4 1407F99F4; Connections 140A0D6B0; S3
+// 7100C371D8 S3: +0x11C; 7100C371D8. Matching reader role.. Expected 103; different 0x3F0-byte layout.
+// Connections: +0x1BE; 140A0D6B0. Matching offset and reader role. Expected 110. This diagnostic logs a mismatch
+// and still copies the record.
+//
+// +0x1C0 [4 bytes] RunSpeed (float; confirmed). Base forward speed. Loader multiplies file value by
+// defaultFPS/currentFPS. Used outside true awakening, including instant awakening. Evidence: 1407F99F4,
+// 14078D158 S3: +0x120; 7100BC15C4. Matching reader role. Connections: +0x1C0; 140970AE0. Matching offset and
+// reader role.
+//
+// +0x1C4 [4 bytes] ChakraDashSpeed (float; confirmed). Move parameter 2, base state; loader applies
+// defaultFPS/currentFPS. Runtime applies condition/charge modifiers and possible overrides. Evidence: 14078D4AC,
+// 1407AEFDC, 1407F99F4 S3: +0x124; 7100BC1624. Matching reader role. Connections: +0x1C4; 140971130. Matching
+// offset and reader role.
+//
+// +0x1C8 [4 bytes] GuardDamage (float; confirmed). Multiplier in GetGuardScrapeRate, combined with the
+// applicable condition percentage. Evidence: 140780520 S3: +0x128; 7100BB5164. Matching reader role.
+// Connections: +0x1C8; 14095FBA0. Matching offset and reader role.
+//
+// +0x1CC [4 bytes] LegacyGuardRate (float; partial). Legacy guard-rate slot: S3 GetGrdPer reads its
+// corresponding +0x12C float, and Connections has a +0x1CC float getter. Neither getter has a recovered code
+// caller in these databases; no S4 semantic reader was found. Final guard behavior is unverified. The former
+// AirDashSpeed name is unsupported. A fresh pointer-reference check also recovered no hidden absolute function
+// pointer to either legacy getter; this does not rule out indirect/generated access. Evidence: S3 7100BB4FFC;
+// Connections 14095FB80; S4 displacement/virtual-reader audit S3: +0x12C; 7100BB4FFC. Matching reader role.
+// Connections: +0x1CC; 14095FB80. Matching offset and reader role. Getter has only an unwind-data reference; no
+// code caller recovered.
+//
+// +0x1D0 [4 bytes] Attack (float; confirmed). Base multiplier used by condition-derived attack calculations; a
+// caller argument can bypass the base multiplier. Evidence: 14077FE38, 1407806AC S3: +0x130; 7100BB4B7C.
+// Matching reader role. Connections: +0x1D0; 14095F1D0, 14095F230. Matching offset and reader role.
+//
+// +0x1D4 [4 bytes] Defense (float; confirmed). Returned as the base defense-rate value by a basic-parameter
+// getter. The final damage formula has additional stages. Evidence: 14079652C S3: +0x134; 7100BB4EC8. Matching
+// reader role. Connections: +0x1D4; 14097E6F0. Matching offset and reader role.
+//
+// +0x1D8 [4 bytes] SupportDamage (float; confirmed). Support attack multiplier; getter defaults to 1.0 if no
+// parameter record exists. Evidence: 140796E64 S3: No direct equivalent established. S3 GetSupportAtkPer
+// (7100BB4CC8) uses its shared attack scalar +0x130, not an independent support scalar. Connections: +0x1D8;
+// 14097FA40. Matching offset and reader role.
+//
+// +0x1DC [4 bytes] ConditionDuration (float; confirmed). Eligible positive-condition duration is multiplied by
+// this value; eligible negative duration is divided by it. Permanent duration -1 is exempt; a separate
+// condition-group predicate controls eligibility. Not restricted to item buffs. Evidence: 140780230, 140760AA8,
+// 140761974 S3: +0x138; 7100BB5018. Matching reader role. Connections: +0x1DC; 14095F840. Matching offset and
+// reader role.
+//
+// +0x1E0 [4 bytes] ChakraCharge (float; confirmed). Scales chakra-charge recovery along with a global charge
+// setting, player speed rate and FPS conversion. Evidence: 1407C5ED4 S3: +0x13C; 7100C04E8C. Matching reader
+// role. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x1E4 [16 bytes] AwakeCondition (char[16]; confirmed). 16-byte condition-name buffer resolved by
+// GetConditionId. Special character/costume and alternate-awakening paths can override it. Evidence: 14077FF30
+// S3: No verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: +0x1E4;
+// 14095F340. Matching offset and reader role.
+//
+// +0x1F4 [4 bytes] AwakeLife (float; confirmed). Health threshold for starting awakening: IsCanStartAwakeMode
+// requires GetLife() <= this value after the other eligibility check. Getter fallback is 100; all supplied
+// entries contain 50. Evidence: 14077FFB8, 1407D5754, 1407D5F70 S3: Related health-gating field +0x170
+// (7100C0E924/7100C0E9EC) opens the awakening gauge. Do not equate that gate with S4 IsCanStartAwakeMode.
+// Connections: +0x1F4; 14095F3D0. Matching offset and reader role.
+//
+// +0x1F8 [2 bytes] NinjaDashSpeed (__int16; confirmed). Move parameter 0, base state. Ninja-dash speed; loader
+// applies defaultFPS/currentFPS. Evidence: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4 S3:
+// +0x17C; 7100BC1624. Matching reader role. Connections: +0x1F8; 140971130. Same movement-table index and
+// base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x1FA [2 bytes] NinjaDashTime (__int16; confirmed). Move parameter 1, base state. Ninja-dash duration also
+// read by another dash-action exit; loader scales by currentFPS/30. Evidence: 14078D4AC, 1407F99F4, 1407ACFE4,
+// 1407AEF18, 140798C64, 1407D25C4 S3: +0x17E; 7100BC1624. Matching reader role. Connections: +0x1FA; 140971130.
+// Same movement-table index and base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x1FC [2 bytes] ChakraDashTime (__int16; confirmed). Move parameter 3, base state. Chakra-dash duration,
+// subject to charged-dash extension and a runtime override; loader scales by currentFPS/30. Evidence: 14078D4AC,
+// 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4 S3: +0x180; 7100BC1624. Matching reader role.
+// Connections: +0x1FC; 140971130. Same movement-table index and base/awakening pairing. Loader FPS conversion:
+// 140A0D6B0.
+//
+// +0x1FE [2 bytes] DashTrackTime (__int16; confirmed). Chakra-dash target-tracking duration, move parameter 4.
+// During continued dash motion, the game rotates toward the target only while ActCnt / (nuccAnmTimePerSec / FPS)
+// is less than this value. This limits homing, not total dash duration (move parameter 3). The loader converts
+// file frames by currentFPS/30. Once the action counter is nonnegative, zero or negative values skip that
+// steering window. Evidence: S4 14078D4AC, 140798C64, 1407995F8, 140785C24, 1407D25C4, 1407F99F4; S3 7100BDD150,
+// 7100BBB034 S3: +0x182; GetMoveParam 7100BC1624. CtrlAct chakra-dash path 7100BDD150 reads indexes 4/5 and
+// calls named CalcDircInterp (7100BBB034). S3 performs additional frame-rate conversion inside its interpolation
+// helper; do not substitute its formula for S4. Connections: +0x1FE; 140971130. Same movement-table index and
+// base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x200 [4 bytes] DashTurnRate (float; confirmed). Chakra-dash turn-strength coefficient, move parameter 5. The
+// dash passes field * 72 degrees to CalcDircInterp; team-secret-technique preparation passes field * 90 degrees.
+// The helper multiplies by actor GetSpeedRate, applies 1/4, 1/3 or 1/2 damping near the target, quantizes to
+// 1/65536 of a turn, then converts to radians. Nearly aligned directions snap to the target. This is not a
+// literal degrees-per-second field. Evidence: S4 14078D4AC, 140798C64, 1407995F8, 140785C24, 1407D25C4,
+// 1407F99F4; S3 7100BDD150, 7100BBB034 S3: +0x184; GetMoveParam 7100BC1624. CtrlAct chakra-dash path 7100BDD150
+// reads indexes 4/5 and calls named CalcDircInterp (7100BBB034). S3 performs additional frame-rate conversion
+// inside its interpolation helper; do not substitute its formula for S4. Connections: +0x200; 140971130. Same
+// movement-table index and base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x204 [30 bytes] UpItem (char[30]; confirmed). 30-byte item-name buffer, resolved to an item ID. Explicit
+// duel-team item settings override these defaults. Evidence: 140749FB0 S3: No verified counterpart. Storm 3
+// offsets and flag numbers must not be copied into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0;
+// semantic reader not established for this slot.
+//
+// +0x222 [2 bytes] UpCount (__int16; confirmed). 16-bit default item count stored at +30 within this 32-byte
+// item entry. Verify the full word when editing; it is not solely an 8-bit count. Evidence: 140749FB0 S3: No
+// verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x224 [30 bytes] DownItem (char[30]; confirmed). 30-byte item-name buffer, resolved to an item ID. Explicit
+// duel-team item settings override these defaults. Evidence: 140749FB0 S3: No verified counterpart. Storm 3
+// offsets and flag numbers must not be copied into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0;
+// semantic reader not established for this slot.
+//
+// +0x242 [2 bytes] DownCount (__int16; confirmed). 16-bit default item count stored at +30 within this 32-byte
+// item entry. Verify the full word when editing; it is not solely an 8-bit count. Evidence: 140749FB0 S3: No
+// verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x244 [30 bytes] LeftItem (char[30]; confirmed). 30-byte item-name buffer, resolved to an item ID. Explicit
+// duel-team item settings override these defaults. Evidence: 140749FB0 S3: No verified counterpart. Storm 3
+// offsets and flag numbers must not be copied into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0;
+// semantic reader not established for this slot.
+//
+// +0x262 [2 bytes] LeftCount (__int16; confirmed). 16-bit default item count stored at +30 within this 32-byte
+// item entry. Verify the full word when editing; it is not solely an 8-bit count. Evidence: 140749FB0 S3: No
+// verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x264 [30 bytes] RightItem (char[30]; confirmed). 30-byte item-name buffer, resolved to an item ID. Explicit
+// duel-team item settings override these defaults. Evidence: 140749FB0 S3: No verified counterpart. Storm 3
+// offsets and flag numbers must not be copied into S4. Connections: Same 0x2D8-byte core copied by 0x140A0D6B0;
+// semantic reader not established for this slot.
+//
+// +0x282 [2 bytes] RightCount (__int16; confirmed). 16-bit default item count stored at +30 within this 32-byte
+// item entry. Verify the full word when editing; it is not solely an 8-bit count. Evidence: 140749FB0 S3: No
+// verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x284 [4 bytes] AwakeRunSpeed (float; confirmed). Awakened counterpart of +0x1C0. Selected only when
+// awakening is active and AwakeType != 1. Base forward speed. Loader multiplies file value by
+// defaultFPS/currentFPS. Used outside true awakening, including instant awakening. Evidence: 1407F99F4,
+// 14078D158 S3: +0x35C; 7100BC15C4. Matching reader role. Connections: +0x284; 140970AE0. Matching offset and
+// reader role.
+//
+// +0x288 [4 bytes] AwakeChakraDashSpeed (float; confirmed). Awakened counterpart of +0x1C4. Selected only when
+// awakening is active and AwakeType != 1. Move parameter 2, base state; loader applies defaultFPS/currentFPS.
+// Runtime applies condition/charge modifiers and possible overrides. Evidence: 14078D4AC, 1407AEFDC, 1407F99F4
+// S3: +0x360; 7100BC1624. Matching reader role. Connections: +0x288; 140971130. Same movement-table index and
+// base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x28C [2 bytes] AwakeNinjaDashSpeed (__int16; confirmed). Awakened counterpart of +0x1F8. Selected only when
+// awakening is active and AwakeType != 1. Move parameter 0, base state. Ninja-dash speed; loader applies
+// defaultFPS/currentFPS. Evidence: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4 S3: +0x364;
+// 7100BC1624. Matching reader role. Connections: +0x28C; 140971130. Same movement-table index and base/awakening
+// pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x28E [2 bytes] AwakeNinjaDashTime (__int16; confirmed). Awakened counterpart of +0x1FA. Selected only when
+// awakening is active and AwakeType != 1. Move parameter 1, base state. Ninja-dash duration also read by another
+// dash-action exit; loader scales by currentFPS/30. Evidence: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18,
+// 140798C64, 1407D25C4 S3: +0x366; 7100BC1624. Matching reader role. Connections: +0x28E; 140971130. Same
+// movement-table index and base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x290 [2 bytes] AwakeChakraDashTime (__int16; confirmed). Awakened counterpart of +0x1FC. Selected only when
+// awakening is active and AwakeType != 1. Move parameter 3, base state. Chakra-dash duration, subject to
+// charged-dash extension and a runtime override; loader scales by currentFPS/30. Evidence: 14078D4AC, 1407F99F4,
+// 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4 S3: +0x368; 7100BC1624. Matching reader role. Connections: +0x290;
+// 140971130. Same movement-table index and base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x292 [2 bytes] AwakeDashTrackTime (__int16; confirmed). True-awakening counterpart: selected when awakening
+// is active and AwakeType != 1. Chakra-dash target-tracking duration, move parameter 4. During continued dash
+// motion, the game rotates toward the target only while ActCnt / (nuccAnmTimePerSec / FPS) is less than this
+// value. This limits homing, not total dash duration (move parameter 3). The loader converts file frames by
+// currentFPS/30. Once the action counter is nonnegative, zero or negative values skip that steering window.
+// Evidence: S4 14078D4AC, 140798C64, 1407995F8, 140785C24, 1407D25C4, 1407F99F4; S3 7100BDD150, 7100BBB034 S3:
+// +0x36A; GetMoveParam 7100BC1624. CtrlAct chakra-dash path 7100BDD150 reads indexes 4/5 and calls named
+// CalcDircInterp (7100BBB034). S3 performs additional frame-rate conversion inside its interpolation helper; do
+// not substitute its formula for S4. Connections: +0x292; 140971130. Same movement-table index and
+// base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x294 [4 bytes] AwakeDashTurnRate (float; confirmed). True-awakening counterpart: selected when awakening is
+// active and AwakeType != 1. Chakra-dash turn-strength coefficient, move parameter 5. The dash passes field * 72
+// degrees to CalcDircInterp; team-secret-technique preparation passes field * 90 degrees. The helper multiplies
+// by actor GetSpeedRate, applies 1/4, 1/3 or 1/2 damping near the target, quantizes to 1/65536 of a turn, then
+// converts to radians. Nearly aligned directions snap to the target. This is not a literal degrees-per-second
+// field. Evidence: S4 14078D4AC, 140798C64, 1407995F8, 140785C24, 1407D25C4, 1407F99F4; S3 7100BDD150,
+// 7100BBB034 S3: +0x36C; GetMoveParam 7100BC1624. CtrlAct chakra-dash path 7100BDD150 reads indexes 4/5 and
+// calls named CalcDircInterp (7100BBB034). S3 performs additional frame-rate conversion inside its interpolation
+// helper; do not substitute its formula for S4. Connections: +0x294; 140971130. Same movement-table index and
+// base/awakening pairing. Loader FPS conversion: 140A0D6B0.
+//
+// +0x298 [4 bytes] Unknown298 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x29C [4 bytes] Unknown29C (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2A0 [4 bytes] Unknown2A0 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2A4 [4 bytes] Unknown2A4 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2A8 [4 bytes] Unknown2A8 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2AC [4 bytes] Unknown2AC (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2B0 [4 bytes] Unknown2B0 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2B4 [4 bytes] Unknown2B4 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2B8 [4 bytes] Unknown2B8 (float; unresolved). Float interpretation retained from existing type annotation
+// and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a
+// meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts
+// (+0x370 onward), not matching floats. S4 obtains those priorities from
+// skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot. Evidence: S4
+// 14079602C; S3 7100BCBEE0; S4/Connections displacement and parameter-accessor audits S3: No verified
+// counterpart. The region after S3 awake movement contains indexed int16 skill priorities (+0x370..+0x390) and
+// secret-technique priorities (+0x394/+0x396/+0x398). Its type/layout differs from this S4 float display.
+// Connections: Same 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2BC [4 bytes] Unknown2BC (float; unresolved). Unresolved four-byte slot. Existing S4 float interpretation
+// is provisional. Connections has an uncalled integer getter at this offset; zero data cannot settle its type.
+// Preserve raw bits; the template also exposes an integer/hex view. S3 has two distinct integer awakening-start
+// fields (+0x39C flag and +0x3A0 action). Neighboring placement alone cannot establish which, if either,
+// corresponds to S4 +0x2BC. Evidence: Connections 140820EB0; S3 7100D3C4B4, 7100D3C4F0; S4 getter/reader audit
+// S3: Two nearby S3 integer concepts exist: GetAwakeStartFlag at +0x39C and GetAwakeStartAction at +0x3A0. No
+// verified one-to-one mapping to this S4 slot. Connections: At the same +0x2BC, 140820EB0 reads a 32-bit integer
+// (MOV EAX), with only an unwind-data reference. Its semantic name and active use remain unresolved. The S4
+// float display is provisional; retain raw bits.
+//
+// +0x2C0 [4 bytes] AwakeDashPriority (__int32; confirmed). Nonzero permits chakra-dash priority 390 while
+// awakened; otherwise 350. Outside awakening priority is 350. This is a separate integer setting from the
+// huge-awakening bit. Evidence: 1406BFB64, 1407AEF94 S3: No verified counterpart. Storm 3 offsets and flag
+// numbers must not be copied into S4. Connections: +0x2C0; 140820E90, 14099EBF0. Nonzero permits awakened
+// priority 390; Connections additionally chooses 391 when both players satisfy its huge-awakening predicates. S4
+// behavior stays 350/390.
+//
+// +0x2C4 [4 bytes] AwakeRisk (__int32; confirmed). Multi-mode awakening risk/recovery setting, not just a
+// boolean debuff switch. Modes 0-5 select recovery, reaction-condition and awakening-action gauge paths; see
+// mode table below. Character-specific overrides exist. Evidence: 1406BFB18, 1407D4F1C, 1407D52B0, 1407D62A8 S3:
+// Related risk mode +0x3A4 (7100D3C52C). S3 modes/cost paths differ; use the S4 mode descriptions. Connections:
+// +0x2C4; 140820E30. Matching offset and reader role.
+//
+// +0x2C8 [4 bytes] AwakeChakraCost (float; confirmed). Float amount subtracted from maximum chakra on awakening
+// start, with minimum resulting maximum 30; current chakra is clamped down if necessary. Zero bypasses this
+// adjustment. Evidence: 1406BFB7C, 1407D62A8 S3: Related float +0x3A8 (7100D3C5B4). S3 readers can consume life,
+// chakra, or maximum chakra (7100C10E7C/7100C10FA4/7100C110D4); this is not a portable cost formula.
+// Connections: +0x2C8; 140820ED0. Matching offset and reader role.
+//
+// +0x2CC [4 bytes] Unknown2CC (float; unresolved). Float values approximately 0.1 (263 records) or 0.03 (6
+// records). No verified consumer; not the confirmed maximum-chakra recovery field, which is +0x2D0. A fresh
+// Connections offset scan likewise did not establish a parameter-record reader. Do not alias it to
+// maximum-chakra recovery or special-support gauge recovery merely because their values are similar. Evidence:
+// S4 getter/basic-parameter audits; Connections offset scan; confirmed neighboring getters 140820E70/140820EF0
+// S3: No verified counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: Same
+// 0x2D8-byte core copied by 0x140A0D6B0; semantic reader not established for this slot.
+//
+// +0x2D0 [4 bytes] MaxChakraRecovery (float; confirmed). Per-update recovery of maximum chakra, capped at 100.
+// Nonpositive values fall back to 0.1. Recovery depends on AwakeRisk and an additional runtime block flag. This
+// offset is mislabeled UNKNOWN_230 in the current IDA type. Evidence: 1406BFB48, 1407D4F1C S3: No verified
+// counterpart. Storm 3 offsets and flag numbers must not be copied into S4. Connections: +0x2D0; 140820E70.
+// Matching offset and reader role.
+//
+// +0x2D4 [4 bytes] AwakeActionRecovery (float; confirmed). Recovery increment for inactive special-type gauges,
+// scaled by defaultFPS/currentFPS. Four gauge slots are considered; character-specific recovery overrides exist.
+// Evidence: 1406BFB98, 1407D3CE4, 140577B88 S3: Related special-support recovery +0x3AC (7100D3C5CC); S4 uses
+// inactive special-type action gauges. Do not assume identical mechanics. Connections: +0x2D4; 140820EF0.
+// Matching offset and reader role.
+//
+// +0x2D8 [32 bytes] ExtraTail (byte[32]; unresolved). Extra bytes in the supplied 760-byte Evo record. S4 and
+// Connections loaders copy only 728 bytes. Preserve this tail; no mod-specific meaning is established. Evidence:
+// S4 1407F99F4; Connections 140A0D6B0 S3: No portable equivalent; S3 uses a different 0x3F0-byte layout.
+// Connections: Outside the copied 0x2D8-byte core.
+//
+// Bit map (S4 mask positions; do not apply S3 bit numbers to S4):
+// S4 bit 0 (0x00000001): Throw fall handling. S3: Bit 0; 7100EFAD48. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 0; 14098F410. Matching consumer role.
+// S4 bit 1 (0x00000002): Keep double state after throw. S3: Bit 1; 7100EFAD48. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 1; 14098F410. Matching consumer role.
+// S4 bit 2 (0x00000004): Render toggle (partial). S3: Bit 4; 7100B9E744. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 2; 1409415E0. Matching consumer role.
+// S4 bit 3 (0x00000008): Puppet. S3: Bit 7; 7100BCBD88. Matching consumer role; game-specific conditions differ.
+// Connections: Bit 3; 140980970. Matching consumer role.
+// S4 bit 4 (0x00000010): Puppet controller. S3: Bit 8; 7100BCBD94. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 4; 1409809D0, 140980BC0. Matching consumer role.
+// S4 bit 5 (0x00000020): Attachment by animation source. S3: Bit 16; 7100BA8100. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 5; 14094CB50. Matching consumer role.
+// S4 bit 6 (0x00000040): Finish run-stop animation. S3: No verified equivalent bit. Connections: Bit 6;
+// 14099E940. Matching consumer role.
+// S4 bit 7 (0x00000080): Finish awakened run-stop. S3: No verified equivalent bit. Connections: Bit 7;
+// 14099E940. Matching consumer role.
+// S4 bit 8 (0x00000100): Default substitution selection. S3: Bit 20; 7100BF0968. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 8; 1409B5000, 1409B54A0. Matching consumer role.
+// S4 bit 9 (0x00000200): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 10 (0x00000400): Keep base glare. S3: No verified equivalent bit. Connections: Bit 10; 1409514D0.
+// Matching consumer role.
+// S4 bit 11 (0x00000800): Keep awakened glare. S3: No verified equivalent bit. Connections: Bit 11; 1409514D0.
+// Matching consumer role.
+// S4 bit 12 (0x00001000): Awakened warp dash. S3: Bit 2; 7100BD7814. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 12; 140993EC0. Matching consumer role.
+// S4 bit 13 (0x00002000): Keep dodge drawing (predicate). S3: Bit 3; 7100C02B18. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 13; 1409CBC80. Matching consumer role.
+// S4 bit 14 (0x00004000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 15 (0x00008000): Separate awakening events. S3: Bit 6; 7100C332E0. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 15; 140A09B80. Matching consumer role.
+// S4 bit 16 (0x00010000): Awakening super armor / huge classification. S3: Bit 9; 7100BCB9DC. Matching consumer
+// role; game-specific conditions differ. Connections: Bit 16; 140980520. Matching consumer role.
+// S4 bit 17 (0x00020000): Huge awakening camera. S3: Bit 10; 7100BCBC34. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 17; 1409805D0. Matching consumer role.
+// S4 bit 18 (0x00040000): Huge awakening foot sound. S3: Bit 11; 7100BC80C4. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 18; 140979130. Matching consumer role.
+// S4 bit 19 (0x00080000): Awakened hitmark decoration. S3: Bit 12; 7100BAF8C8. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 19; 140957650. Matching consumer role.
+// S4 bit 20 (0x00100000): No awakened damage turn. S3: Bit 13; 7100BD1DC4. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 20; 14098C520. Matching consumer role.
+// S4 bit 21 (0x00200000): Awakened directional-damage exception. S3: Bit 14; 7100BCBD0C. Matching consumer role;
+// game-specific conditions differ. Connections: Bit 21; 14097FE00. Matching consumer role.
+// S4 bit 22 (0x00400000): Unresolved. S3: S3 bit 15 gates IsAwakeStartCutInAction (7100BCBD5C). The S4
+// counterpart 140797088 no longer tests a flag. Enum proximity alone does NOT prove S4 bit 22 is this old flag.
+// Connections: No direct consumer recovered for this bit in the traced accessor paths.
+// S4 bit 23 (0x00800000): End awakening on defeat. S3: Bit 18; 7100BF7550. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 23; 1409C54C0. Matching consumer role.
+// S4 bit 24 (0x01000000): Awakening skill. S3: Bit 19; 7100BE0D90. Matching consumer role; game-specific
+// conditions differ. Connections: Bit 24; 1409A0510. Matching consumer role. Connections uses more
+// skill-selection paths; do not copy its extra skill behavior into S4.
+// S4 bit 25 (0x02000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 26 (0x04000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 27 (0x08000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 28 (0x10000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 29 (0x20000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 30 (0x40000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
+// S4 bit 31 (0x80000000): Unresolved. S3: No verified equivalent bit. Connections: No direct consumer recovered
+// for this bit in the traced accessor paths.
 
 // Storm 4: NSUNS4_107.i64, ccGetPlayerFlagParam at 0x1405297D4.
 // Bit numbers are zero-based. Unknown does not mean unused by the game.
@@ -51,6 +664,24 @@ typedef enum <uint>
     PF_Unknown31 = 0x80000000, // bit 31
 } TDppFlags;
 
+// Research: NSUNS4_107; offsets are relative to MotionCode. Unknown != unused.
+typedef enum <int> { DP_Default = -1, DP_Normal = 301, DP_High = 390 } TDppPriority;
+typedef enum <int> { DS_Keep = -1, DS_0 = 0, DS_1 = 1, DS_2 = 2, DS_3 = 3, DS_4 = 4, DS_5 = 5 } TDppSkill;
+// Support class names 1/2 are legacy S3 names; their full S4 effects remain unverified.
+typedef enum <int> { DST_Unspecified = -1, DST_Attack = 0, DST_Defense_Legacy = 1, DST_Balance_Legacy = 2 } TDppSupportClass;
+typedef enum <int> { DJ_Default = -1, DJ_Type0 = 0, DJ_Type1 = 1 } TDppJob;
+typedef enum <int> { DA_Default = -1, DA_Normal = 0, DA_Female = 1 } TDppAnims;
+// Mode names describe observed branches, not official source enum names.
+typedef enum <int> {
+    DR_Mode0 = 0, // Max-chakra recovery waits until awakening ends.
+    DR_Reaction = 1, // Exit reaction condition; max-chakra recovery can run while awake.
+    DR_ReactionSkills = 2, // Mode 1 plus filling action gauges 2 and 3 on start.
+    DR_Life = 3, // Tracks/replenishes life after awakening; no max-chakra recovery while awake.
+    DR_LifeSkills = 4, // Life-recovery branch plus filling action gauges 2 and 3.
+    DR_Skills = 5 // Fills gauges 2 and 3; max-chakra recovery waits until awakening ends.
+} TDppRisk;
+typedef enum <int> { DD_Off = 0, DD_On = 1 } TDppDash;
+
 typedef struct
 {
 BigEndian();
@@ -59,8 +690,7 @@ uint FileSize;
 LittleEndian();
 
 struct{
-    string MotionCode;
-    FSkip(7 - Strlen(MotionCode));
+    char MotionCode[8]; // Fixed eight-byte motion characode, +0x000.
     struct{
         struct{
         char costume_name[8];
@@ -194,74 +824,315 @@ struct{
         }Bits;
     }conditions;
     if (dppPreviousBitDirection) BitfieldLeftToRight();
-    FSkip(12);
+    // Preserve the custom Evo bytes and the unknown word. No layout changes.
+    // +0x154: Eight bytes used by the existing custom setEvo1/EvoDup editor feature. No stock-S4 semantic claim
+    // is made; preserve both halves and the existing serialization. S4: Tool_DuelPlayerParamEditor.cs.
+    ubyte EvoCustom[8] <comment="Eight bytes used by the existing custom setEvo1/EvoDup editor feature. No stock-S4 semantic claim is made; preserve both halves and the existing serialization.">;
+    // +0x15C: All supplied records contain zero. No confirmed stock-game consumer; preserve these four bytes.
+    // It is addressable arithmetically as flag word 3 for indexes 96..127, but no such caller was recovered.
+    // Direct +0x15C hits in player movement refer to player-object state, not automatically to the parameter
+    // record.
+    int Unknown15C <comment="All supplied records contain zero. No confirmed stock-game consumer; preserve these four bytes. It is addressable arithmetically as flag word 3 for indexes 96..127, but no such caller was recovered. Direct +0x15C hits in player movement refer to player-object state, not automatically to the parameter record.">;
     struct{
-
-        int unk;
-    }flag_settings[17];
+        // +0x160: Indexed parameter 0. Positive values replace awakening attack/body priority on awakening entry;
+        // ordinary priority is restored on exit. Observed -1, 301, 390. S4: 14052982C, 1407D686C, 1407D52B0.
+        TDppPriority AwakePriority <comment="Indexed parameter 0. Positive values replace awakening attack/body priority on awakening entry; ordinary priority is restored on exit. Observed -1, 301, 390.">;
+        // +0x164: Indexed parameter 1. Default awakening skill number; separate from flag bit 24. The helper has
+        // character/state-dependent paths. Observed -1 and 0. S4: 1407BDB4C, 14052982C.
+        TDppSkill AwakeSkill <comment="Indexed parameter 1. Default awakening skill number; separate from flag bit 24. The helper has character/state-dependent paths. Observed -1 and 0.">;
+        // +0x168: Indexed parameter 2. Negative values normalize to 0. Pause-menu filtering: type 0 excludes
+        // sys_free_command_039; type 1 excludes sys_free_command_018. Broader meaning of the category is
+        // unresolved. Fresh direct/wrapper audits still find a command-list role rather than a combat-state switch.
+        // Only 3mfn has value 1 in the supplied asset. This correlation alone does not prove a general Samurai
+        // class or enable samurai abilities.
+        TDppJob JobType <comment="Indexed parameter 2. Negative values normalize to 0. Pause-menu filtering: type 0 excludes sys_free_command_039; type 1 excludes sys_free_command_018. Broader meaning of the category is unresolved. Fresh direct/wrapper audits still find a command-list role rather than a combat-state switch. Only 3mfn has value 1 in the supplied asset. This correlation alone does not prove a general Samurai class or enable samurai abilities.">;
+        // +0x16C: Indexed integer slot 3. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown16C <comment="Indexed integer slot 3. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x170: Indexed integer slot 4. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown170 <comment="Indexed integer slot 4. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x174: Indexed integer slot 5. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown174 <comment="Indexed integer slot 5. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x178: Indexed integer slot 6. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown178 <comment="Indexed integer slot 6. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x17C: Indexed parameter 7. Exactly 1 invokes ConvertWomanAnm for selected damage and support-rescue
+        // animation IDs; other values leave those IDs unchanged. S4: 140779658, 1407770B4.
+        TDppAnims FemaleAnims <comment="Indexed parameter 7. Exactly 1 invokes ConvertWomanAnm for selected damage and support-rescue animation IDs; other values leave those IDs unchanged.">;
+        // +0x180: Indexed integer slot 8. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown180 <comment="Indexed integer slot 8. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x184: Indexed integer slot 9. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown184 <comment="Indexed integer slot 9. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x188: Indexed integer slot 10. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown188 <comment="Indexed integer slot 10. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x18C: Indexed integer slot 11. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown18C <comment="Indexed integer slot 11. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x190: Indexed integer slot 12. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown190 <comment="Indexed integer slot 12. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x194: Indexed integer slot 13. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown194 <comment="Indexed integer slot 13. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x198: Indexed integer slot 14. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown198 <comment="Indexed integer slot 14. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x19C: Indexed integer slot 15. All supplied records contain -1. A fresh audit of both the global
+        // accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7;
+        // no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not
+        // proof of unused storage.
+        int Unknown19C <comment="Indexed integer slot 15. All supplied records contain -1. A fresh audit of both the global accessor and the player/pair-awakening wrapper finds constant consumers only for indexes 0, 1, 2 and 7; no semantic reader for this slot was established. Preserve the slot; lack of a traced consumer is not proof of unused storage.">;
+        // +0x1A0: Default support class copied during adventure battle setup into +0x0C of a 0x3C-byte team-member
+        // record. S4 IsAttackTypeSupport tests that member class for 0. S3 establishes the legacy class names: 0
+        // Attack, 1 Defense, 2 Balance. S4 effects for classes 1/2 are not established by this trace; this field
+        // does not select its separate Strike Back/Dash Cut/etc. support actions.
+        TDppSupportClass DefaultSupportType <comment="Default support class copied during adventure battle setup into +0x0C of a 0x3C-byte team-member record. S4 IsAttackTypeSupport tests that member class for 0. S3 establishes the legacy class names: 0 Attack, 1 Defense, 2 Balance. S4 effects for classes 1/2 are not established by this trace; this field does not select its separate Strike Back/Dash Cut/etc. support actions.">;
+    }flag_settings;
     struct{
-        struct{
-        char characode[8];
-        }support[2]<optimize=false>;
+        // +0x1A4: First default support characode. Used by character-select default support panels. S4: 140647CC4.
+        char Support1[8] <comment="First default support characode. Used by character-select default support panels.">;
+        // +0x1AC: Second default support characode. Empty strings occur. S4: 140647CC4.
+        char Support2[8] <comment="Second default support characode. Empty strings occur.">;
     }supports;
     struct{
         struct{
-            int16 cameraDistance;
-            int16 unk1; //doesnt work
-            int16 VictoryGameAngle;
-            int16 unk2;
-            int16 unk3;
-            int16 unk4;
-        }WinSettings;
+            // +0x1B4: Signed 16-bit height converted to float by GetHeight. Used in collision/camera/effect
+            // positioning; not a dedicated victory-camera distance. S4: 14079697C, 140794738, 14073FC74.
+            int16 Height <comment="Signed 16-bit height converted to float by GetHeight. Used in collision/camera/effect positioning; not a dedicated victory-camera distance.">;
+            // +0x1B6: Signed 16-bit-looking populated field adjacent to Height and VictoryHeight; no confirmed
+            // consumer. Do not call it a camera Y coordinate or declare it unused. The deeper cross-game scan
+            // establishes no semantic getter. S3 places end-demo height directly after height, so it supplies no
+            // matching intervening short.
+            int16 Unknown1B6 <comment="Signed 16-bit-looking populated field adjacent to Height and VictoryHeight; no confirmed consumer. Do not call it a camera Y coordinate or declare it unused. The deeper cross-game scan establishes no semantic getter. S3 places end-demo height directly after height, so it supplies no matching intervening short.">;
+            // +0x1B8: Signed 16-bit value converted to float, cached by the end-demo controller, then used as a
+            // vertical target offset and in camera-distance calculations. It is a framing height, not an angle. S4:
+            // 1407969A8, 1406B590C, 1406B5048, 1406B5300.
+            int16 VictoryHeight <comment="Signed 16-bit value converted to float, cached by the end-demo controller, then used as a vertical target offset and in camera-distance calculations. It is a framing height, not an angle.">;
+            // +0x1BA: Radius passed to the body collision sphere and used by smash-hit updates. S4: 140791650,
+            // 1407927CC.
+            int16 BodyRadius <comment="Radius passed to the body collision sphere and used by smash-hit updates.">;
+            // +0x1BC: Radius used for both the damage and atemi collision-sphere groups (three spheres in each reset
+            // path). S4: 1407915B8, 1407916C0.
+            int16 DamageRadius <comment="Radius used for both the damage and atemi collision-sphere groups (three spheres in each reset path).">;
+            // +0x1BE: Signed 16-bit parameter format version, not a collision or camera setting. Connections checks this same offset against 110; S3 checks +0x11C against 103. S4_107 copies the field but has no corresponding diagnostic check.
+            int16 ParamVersion <comment="Signed 16-bit parameter format version, not a collision or camera setting. Connections checks this same offset against 110; S3 checks +0x11C against 103. S4_107 copies the field but has no corresponding diagnostic check.">;
+        }body_settings;
         struct{
-            float MovementSpeed;
-            float ChakraDashSpeed;
-            float GuardPressure;
-            float AirDashSpeed;
-            float Attack;
-            float Defense;
-            float AssistDamage;
-            float ItemBuffDuration;
-            float ChakraChargeSpeed;
-            char AwakeningCondition[16];
-            float AwakeHPRequirement;
-            int16 NinjaDashSpeed;
-            int16 AirDashDuration;
-            int16 GroundedChakraDashDuration;
-            int16 unk1;
-            float unk2;
+            // +0x1C0: Base forward speed. Loader multiplies file value by defaultFPS/currentFPS. Used outside true
+            // awakening, including instant awakening. S4: 1407F99F4, 14078D158.
+            float RunSpeed <comment="Base forward speed. Loader multiplies file value by defaultFPS/currentFPS. Used outside true awakening, including instant awakening.">;
+            // +0x1C4: Move parameter 2, base state; loader applies defaultFPS/currentFPS. Runtime applies
+            // condition/charge modifiers and possible overrides. S4: 14078D4AC, 1407AEFDC, 1407F99F4.
+            float ChakraDashSpeed <comment="Move parameter 2, base state; loader applies defaultFPS/currentFPS. Runtime applies condition/charge modifiers and possible overrides.">;
+            // +0x1C8: Multiplier in GetGuardScrapeRate, combined with the applicable condition percentage. S4:
+            // 140780520.
+            float GuardDamage <comment="Multiplier in GetGuardScrapeRate, combined with the applicable condition percentage.">;
+            // +0x1CC: Legacy guard-rate slot: S3 GetGrdPer reads its corresponding +0x12C float, and Connections has a
+            // +0x1CC float getter. Neither getter has a recovered code caller in these databases; no S4 semantic reader
+            // was found. Final guard behavior is unverified. The former AirDashSpeed name is unsupported. A fresh
+            // pointer-reference check also recovered no hidden absolute function pointer to either legacy getter; this
+            // does not rule out indirect/generated access.
+            float LegacyGuardRate <comment="Legacy guard-rate slot: S3 GetGrdPer reads its corresponding +0x12C float, and Connections has a +0x1CC float getter. Neither getter has a recovered code caller in these databases; no S4 semantic reader was found. Final guard behavior is unverified. The former AirDashSpeed name is unsupported. A fresh pointer-reference check also recovered no hidden absolute function pointer to either legacy getter; this does not rule out indirect/generated access.">;
+            // +0x1D0: Base multiplier used by condition-derived attack calculations; a caller argument can bypass the
+            // base multiplier. S4: 14077FE38, 1407806AC.
+            float Attack <comment="Base multiplier used by condition-derived attack calculations; a caller argument can bypass the base multiplier.">;
+            // +0x1D4: Returned as the base defense-rate value by a basic-parameter getter. The final damage formula has
+            // additional stages. S4: 14079652C.
+            float Defense <comment="Returned as the base defense-rate value by a basic-parameter getter. The final damage formula has additional stages.">;
+            // +0x1D8: Support attack multiplier; getter defaults to 1.0 if no parameter record exists. S4: 140796E64.
+            float SupportDamage <comment="Support attack multiplier; getter defaults to 1.0 if no parameter record exists.">;
+            // +0x1DC: Eligible positive-condition duration is multiplied by this value; eligible negative duration is
+            // divided by it. Permanent duration -1 is exempt; a separate condition-group predicate controls
+            // eligibility. Not restricted to item buffs. S4: 140780230, 140760AA8, 140761974.
+            float ConditionDuration <comment="Eligible positive-condition duration is multiplied by this value; eligible negative duration is divided by it. Permanent duration -1 is exempt; a separate condition-group predicate controls eligibility. Not restricted to item buffs.">;
+            // +0x1E0: Scales chakra-charge recovery along with a global charge setting, player speed rate and FPS
+            // conversion. S4: 1407C5ED4.
+            float ChakraCharge <comment="Scales chakra-charge recovery along with a global charge setting, player speed rate and FPS conversion.">;
+            // +0x1E4: 16-byte condition-name buffer resolved by GetConditionId. Special character/costume and
+            // alternate-awakening paths can override it. S4: 14077FF30.
+            char AwakeCondition[16] <comment="16-byte condition-name buffer resolved by GetConditionId. Special character/costume and alternate-awakening paths can override it.">;
+            // +0x1F4: Health threshold for starting awakening: IsCanStartAwakeMode requires GetLife() <= this value
+            // after the other eligibility check. Getter fallback is 100; all supplied entries contain 50. S4:
+            // 14077FFB8, 1407D5754, 1407D5F70.
+            float AwakeLife <comment="Health threshold for starting awakening: IsCanStartAwakeMode requires GetLife() <= this value after the other eligibility check. Getter fallback is 100; all supplied entries contain 50.">;
+            // +0x1F8: Move parameter 0, base state. Ninja-dash speed; loader applies defaultFPS/currentFPS. S4:
+            // 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4.
+            int16 NinjaDashSpeed <comment="Move parameter 0, base state. Ninja-dash speed; loader applies defaultFPS/currentFPS.">;
+            // +0x1FA: Move parameter 1, base state. Ninja-dash duration also read by another dash-action exit; loader
+            // scales by currentFPS/30. S4: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4.
+            int16 NinjaDashTime <comment="Move parameter 1, base state. Ninja-dash duration also read by another dash-action exit; loader scales by currentFPS/30.">;
+            // +0x1FC: Move parameter 3, base state. Chakra-dash duration, subject to charged-dash extension and a
+            // runtime override; loader scales by currentFPS/30. S4: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18,
+            // 140798C64, 1407D25C4.
+            int16 ChakraDashTime <comment="Move parameter 3, base state. Chakra-dash duration, subject to charged-dash extension and a runtime override; loader scales by currentFPS/30.">;
+            // +0x1FE: Chakra-dash target-tracking duration, move parameter 4. During continued dash motion, the game
+            // rotates toward the target only while ActCnt / (nuccAnmTimePerSec / FPS) is less than this value. This
+            // limits homing, not total dash duration (move parameter 3). The loader converts file frames by
+            // currentFPS/30. Once the action counter is nonnegative, zero or negative values skip that steering window.
+            int16 DashTrackTime <comment="Chakra-dash target-tracking duration, move parameter 4. During continued dash motion, the game rotates toward the target only while ActCnt / (nuccAnmTimePerSec / FPS) is less than this value. This limits homing, not total dash duration (move parameter 3). The loader converts file frames by currentFPS/30. Once the action counter is nonnegative, zero or negative values skip that steering window.">;
+            // +0x200: Chakra-dash turn-strength coefficient, move parameter 5. The dash passes field * 72 degrees to
+            // CalcDircInterp; team-secret-technique preparation passes field * 90 degrees. The helper multiplies by
+            // actor GetSpeedRate, applies 1/4, 1/3 or 1/2 damping near the target, quantizes to 1/65536 of a turn, then
+            // converts to radians. Nearly aligned directions snap to the target. This is not a literal degrees-per-
+            // second field.
+            float DashTurnRate <comment="Chakra-dash turn-strength coefficient, move parameter 5. The dash passes field * 72 degrees to CalcDircInterp; team-secret-technique preparation passes field * 90 degrees. The helper multiplies by actor GetSpeedRate, applies 1/4, 1/3 or 1/2 damping near the target, quantizes to 1/65536 of a turn, then converts to radians. Nearly aligned directions snap to the target. This is not a literal degrees-per-second field.">;
         }base_settings;
         struct{
-            char ItemCode[0x1E];
-            int16 Amount_CD;
-        
-        }items[4];
+            char ItemCode[30]; // Item name; order: up, down, left, right. Team settings can override.
+            int16 Count; // Signed 16-bit count, not a single byte or cooldown.
+        }items[4] <optimize=false>;
         struct{
-            float MovementSpeed;
-            float ChakraDashSpeed;
-            int16 NinjaDashSpeed;
-            int16 AirDashDuration;
-            int16 GroundedChakraDashDuration;
-            int16 unk1;
-            float unk2;
-            float unk3;
-            float unk4;
-            float unk5;
-            float unk6;
-            float unk7;
-            float unk8;
-            float unk9;
-            float unk10;
-            float unk11;
-            int unk12;
-            int unk13;
-            int AwakeningDebuffEnabler;
-            int unk14;
-            float unk15;
-            float unk16;
-            float AwakeningActionChargeSpeed;
+            // +0x284: Awakened counterpart of +0x1C0. Selected only when awakening is active and AwakeType != 1. Base
+            // forward speed. Loader multiplies file value by defaultFPS/currentFPS. Used outside true awakening,
+            // including instant awakening. S4: 1407F99F4, 14078D158.
+            float AwakeRunSpeed <comment="Awakened counterpart of +0x1C0. Selected only when awakening is active and AwakeType != 1. Base forward speed. Loader multiplies file value by defaultFPS/currentFPS. Used outside true awakening, including instant awakening.">;
+            // +0x288: Awakened counterpart of +0x1C4. Selected only when awakening is active and AwakeType != 1. Move
+            // parameter 2, base state; loader applies defaultFPS/currentFPS. Runtime applies condition/charge modifiers
+            // and possible overrides. S4: 14078D4AC, 1407AEFDC, 1407F99F4.
+            float AwakeChakraDashSpeed <comment="Awakened counterpart of +0x1C4. Selected only when awakening is active and AwakeType != 1. Move parameter 2, base state; loader applies defaultFPS/currentFPS. Runtime applies condition/charge modifiers and possible overrides.">;
+            // +0x28C: Awakened counterpart of +0x1F8. Selected only when awakening is active and AwakeType != 1. Move
+            // parameter 0, base state. Ninja-dash speed; loader applies defaultFPS/currentFPS. S4: 14078D4AC,
+            // 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4.
+            int16 AwakeNinjaDashSpeed <comment="Awakened counterpart of +0x1F8. Selected only when awakening is active and AwakeType != 1. Move parameter 0, base state. Ninja-dash speed; loader applies defaultFPS/currentFPS.">;
+            // +0x28E: Awakened counterpart of +0x1FA. Selected only when awakening is active and AwakeType != 1. Move
+            // parameter 1, base state. Ninja-dash duration also read by another dash-action exit; loader scales by
+            // currentFPS/30. S4: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4.
+            int16 AwakeNinjaDashTime <comment="Awakened counterpart of +0x1FA. Selected only when awakening is active and AwakeType != 1. Move parameter 1, base state. Ninja-dash duration also read by another dash-action exit; loader scales by currentFPS/30.">;
+            // +0x290: Awakened counterpart of +0x1FC. Selected only when awakening is active and AwakeType != 1. Move
+            // parameter 3, base state. Chakra-dash duration, subject to charged-dash extension and a runtime override;
+            // loader scales by currentFPS/30. S4: 14078D4AC, 1407F99F4, 1407ACFE4, 1407AEF18, 140798C64, 1407D25C4.
+            int16 AwakeChakraDashTime <comment="Awakened counterpart of +0x1FC. Selected only when awakening is active and AwakeType != 1. Move parameter 3, base state. Chakra-dash duration, subject to charged-dash extension and a runtime override; loader scales by currentFPS/30.">;
+            // +0x292: True-awakening counterpart: selected when awakening is active and AwakeType != 1. Chakra-dash
+            // target-tracking duration, move parameter 4. During continued dash motion, the game rotates toward the
+            // target only while ActCnt / (nuccAnmTimePerSec / FPS) is less than this value. This limits homing, not
+            // total dash duration (move parameter 3). The loader converts file frames by currentFPS/30. Once the action
+            // counter is nonnegative, zero or negative values skip that steering window.
+            int16 AwakeDashTrackTime <comment="True-awakening counterpart: selected when awakening is active and AwakeType != 1. Chakra-dash target-tracking duration, move parameter 4. During continued dash motion, the game rotates toward the target only while ActCnt / (nuccAnmTimePerSec / FPS) is less than this value. This limits homing, not total dash duration (move parameter 3). The loader converts file frames by currentFPS/30. Once the action counter is nonnegative, zero or negative values skip that steering window.">;
+            // +0x294: True-awakening counterpart: selected when awakening is active and AwakeType != 1. Chakra-dash
+            // turn-strength coefficient, move parameter 5. The dash passes field * 72 degrees to CalcDircInterp; team-
+            // secret-technique preparation passes field * 90 degrees. The helper multiplies by actor GetSpeedRate,
+            // applies 1/4, 1/3 or 1/2 damping near the target, quantizes to 1/65536 of a turn, then converts to
+            // radians. Nearly aligned directions snap to the target. This is not a literal degrees-per-second field.
+            float AwakeDashTurnRate <comment="True-awakening counterpart: selected when awakening is active and AwakeType != 1. Chakra-dash turn-strength coefficient, move parameter 5. The dash passes field * 72 degrees to CalcDircInterp; team-secret-technique preparation passes field * 90 degrees. The helper multiplies by actor GetSpeedRate, applies 1/4, 1/3 or 1/2 damping near the target, quantizes to 1/65536 of a turn, then converts to radians. Nearly aligned directions snap to the target. This is not a literal degrees-per-second field.">;
+            // +0x298: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown298 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x29C: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown29C <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2A0: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2A0 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2A4: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2A4 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2A8: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2A8 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2AC: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2AC <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2B0: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2B0 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2B4: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2B4 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2B8: Float interpretation retained from existing type annotation and plausible data. All records share
+            // the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The
+            // similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching
+            // floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names
+            // cannot be transferred to this slot.
+            float Unknown2B8 <comment="Float interpretation retained from existing type annotation and plausible data. All records share the reported value. No verified gameplay consumer; do not infer a meaning from the value alone. The similarly positioned S3 region is an array of signed skill-priority shorts (+0x370 onward), not matching floats. S4 obtains those priorities from skillCustomizeParam/spSkillCustomizeParam, so the S3 names cannot be transferred to this slot.">;
+            // +0x2BC: Unresolved four-byte slot. Existing S4 float interpretation is provisional. Connections has an
+            // uncalled integer getter at this offset; zero data cannot settle its type. Preserve raw bits; the template
+            // also exposes an integer/hex view. S3 has two distinct integer awakening-start fields (+0x39C flag and
+            // +0x3A0 action). Neighboring placement alone cannot establish which, if either, corresponds to S4 +0x2BC.
+            union { float FloatValue; int IntegerValue; uint RawBits <format=hex>; } Unknown2BC <comment="Unresolved four-byte slot. Existing S4 float interpretation is provisional. Connections has an uncalled integer getter at this offset; zero data cannot settle its type. Preserve raw bits; the template also exposes an integer/hex view. S3 has two distinct integer awakening-start fields (+0x39C flag and +0x3A0 action). Neighboring placement alone cannot establish which, if either, corresponds to S4 +0x2BC.">;
+            // +0x2C0: Nonzero permits chakra-dash priority 390 while awakened; otherwise 350. Outside awakening
+            // priority is 350. This is a separate integer setting from the huge-awakening bit. S4: 1406BFB64,
+            // 1407AEF94.
+            TDppDash AwakeDashPriority <comment="Nonzero permits chakra-dash priority 390 while awakened; otherwise 350. Outside awakening priority is 350. This is a separate integer setting from the huge-awakening bit.">;
+            // +0x2C4: Awakening risk mode (character overrides can differ). 0: max-chakra recovery waits until
+            // awakening ends. 1: exit reaction condition; max-chakra recovery can run while awake. 2: mode 1 plus
+            // filling action gauges 2 and 3 on start. 3: tracks/replenishes life after awakening; max-chakra recovery
+            // waits. 4: life-recovery branch plus filling action gauges 2 and 3. 5: fills gauges 2 and 3; max-chakra
+            // recovery waits. Other values are unresolved and preserved. S4: 1406BFB18, 1407D4F1C, 1407D52B0,
+            // 1407D62A8.
+            TDppRisk AwakeRisk <comment="Awakening risk mode (character overrides can differ). 0: max-chakra recovery waits until awakening ends. 1: exit reaction condition; max-chakra recovery can run while awake. 2: mode 1 plus filling action gauges 2 and 3 on start. 3: tracks/replenishes life after awakening; max-chakra recovery waits. 4: life-recovery branch plus filling action gauges 2 and 3. 5: fills gauges 2 and 3; max-chakra recovery waits. Other values are unresolved and preserved.">;
+            // +0x2C8: Float amount subtracted from maximum chakra on awakening start, with minimum resulting maximum
+            // 30; current chakra is clamped down if necessary. Zero bypasses this adjustment. S4: 1406BFB7C, 1407D62A8.
+            float AwakeChakraCost <comment="Float amount subtracted from maximum chakra on awakening start, with minimum resulting maximum 30; current chakra is clamped down if necessary. Zero bypasses this adjustment.">;
+            // +0x2CC: Float values approximately 0.1 (263 records) or 0.03 (6 records). No verified consumer; not the
+            // confirmed maximum-chakra recovery field, which is +0x2D0. A fresh Connections offset scan likewise did
+            // not establish a parameter-record reader. Do not alias it to maximum-chakra recovery or special-support
+            // gauge recovery merely because their values are similar.
+            float Unknown2CC <comment="Float values approximately 0.1 (263 records) or 0.03 (6 records). No verified consumer; not the confirmed maximum-chakra recovery field, which is +0x2D0. A fresh Connections offset scan likewise did not establish a parameter-record reader. Do not alias it to maximum-chakra recovery or special-support gauge recovery merely because their values are similar.">;
+            // +0x2D0: Per-update recovery of maximum chakra, capped at 100. Nonpositive values fall back to 0.1.
+            // Recovery depends on AwakeRisk and an additional runtime block flag. This offset is mislabeled UNKNOWN_230
+            // in the current IDA type. S4: 1406BFB48, 1407D4F1C.
+            float MaxChakraRecovery <comment="Per-update recovery of maximum chakra, capped at 100. Nonpositive values fall back to 0.1. Recovery depends on AwakeRisk and an additional runtime block flag. This offset is mislabeled UNKNOWN_230 in the current IDA type.">;
+            // +0x2D4: Recovery increment for inactive special-type gauges, scaled by defaultFPS/currentFPS. Four gauge
+            // slots are considered; character-specific recovery overrides exist. S4: 1406BFB98, 1407D3CE4, 140577B88.
+            float AwakeActionRecovery <comment="Recovery increment for inactive special-type gauges, scaled by defaultFPS/currentFPS. Four gauge slots are considered; character-specific recovery overrides exist.">;
         }awake_settings;
     }settings;
 }DPP_Entry <optimize=false, read= Str("%s" + "prm_bas",MotionCode)>;
+    // Extra bytes belong to this binary record, outside the stock 0x2D8 core.
+    // The supplied Evo records contain 0x20 zero bytes here. Never interpret
+    // this as the next chunk or apply a Storm 3 layout to it.
+    if (FileSize > 0x2D8)
+        ubyte ExtraTail[FileSize - 0x2D8] <comment="Preserved extension bytes. Mod-specific meaning unresolved; excluded from S4/Connections runtime core copies.">;
 }
 duelPlayerParam <optimize = false>;
