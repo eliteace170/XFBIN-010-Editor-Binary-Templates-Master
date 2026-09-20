@@ -434,19 +434,19 @@ typedef struct
         LittleEndian();
         struct
         {
-            uint16 FrameActionUnlock;      
-            uint16 ActionLength;          
-            uint16 Padding1;              
-            uint16 Unk1;                  
-            float CircleVelocity;          
-            float Unk2;                    
-            float CircleVelocityStrength;  
-            uint16 MovementFrequency;     
-            uint16 Padding2;              
-            float ForwardVelocity;         
-            uint32 padding3;
+            int16 CancelFrame;      
+            int16 AirLength;          
+            int16 CircularAccelerationStartFrame;              
+            int16 CircularAccelerationEndFrame;                  
+            float CircularAccelerationSpeed;          
+            float CircularAccelerationSpeedDropoff;                    
+            float CircularAccelerationSpeedMax;  
+            int16 ForwardAccelerationStartFrame;     
+            int16 ForwardAccelerationEndFrame;              
+            float ForwardAccelerationSpeed;         
+            int32 padding;
         } 
-        GeneralMovement [Size / 0x20] < read = FrameActionUnlock, optimize= false>; 
+        GeneralMovement [Size / 0x20] < read = CancelFrame, optimize= false>; 
         
 }GeneralMovementEntries <optimize= false>;
     
